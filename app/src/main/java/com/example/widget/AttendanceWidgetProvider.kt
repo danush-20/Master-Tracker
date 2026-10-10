@@ -136,7 +136,7 @@ class AttendanceWidgetProvider : AppWidgetProvider() {
         val summaryText = if (slots.isEmpty() && records.isEmpty()) {
             "No classes scheduled today"
         } else if (offCount > 0 && attendedCount == 0 && missedCount == 0 && (slots.isEmpty() || offCount >= slots.size)) {
-            "All Classes Off / Leave"
+            "Day Off / Leave • All $offCount classes off"
         } else {
             "Attended: $attendedCount • Missed: $missedCount • Off: $offCount"
         }

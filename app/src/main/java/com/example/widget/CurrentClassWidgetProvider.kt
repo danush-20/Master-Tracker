@@ -177,6 +177,16 @@ class CurrentClassWidgetProvider : AppWidgetProvider() {
                         views.setTextViewText(R.id.widget_curr_status, "Next class is Off")
                         views.setTextColor(R.id.widget_curr_status, android.graphics.Color.parseColor("#FFB300"))
                         views.setViewVisibility(R.id.widget_curr_countdown, View.GONE)
+                    } else if (nextRec?.status == "MISSED") {
+                        views.setViewVisibility(R.id.widget_curr_status, View.VISIBLE)
+                        views.setTextViewText(R.id.widget_curr_status, "Marked as Missed")
+                        views.setTextColor(R.id.widget_curr_status, android.graphics.Color.parseColor("#E91E63"))
+                        views.setViewVisibility(R.id.widget_curr_countdown, View.GONE)
+                    } else if (nextRec?.status == "ATTENDED") {
+                        views.setViewVisibility(R.id.widget_curr_status, View.VISIBLE)
+                        views.setTextViewText(R.id.widget_curr_status, "Marked as Attended")
+                        views.setTextColor(R.id.widget_curr_status, android.graphics.Color.parseColor("#4CAF50"))
+                        views.setViewVisibility(R.id.widget_curr_countdown, View.GONE)
                     } else {
                         val st = parseTime(nextSlot!!.startTime)
                         views.setViewVisibility(R.id.widget_curr_status, View.GONE)
@@ -192,10 +202,26 @@ class CurrentClassWidgetProvider : AppWidgetProvider() {
                         }
                     }
                 } else {
-                    views.setTextViewText(R.id.widget_curr_subject, "No Classes")
-                    views.setViewVisibility(R.id.widget_curr_status, View.VISIBLE)
-                    views.setTextViewText(R.id.widget_curr_status, "All classes over")
-                    views.setTextColor(R.id.widget_curr_status, android.graphics.Color.parseColor("#4CAF50"))
+                    val offCount = records.count { it.status == "OFF" }
+                    val attCount = records.count { it.status == "ATTENDED" }
+                    val missCount = records.count { it.status == "MISSED" }
+
+                    if (offCount > 0 && attCount == 0 && missCount == 0) {
+                        views.setTextViewText(R.id.widget_curr_subject, "Day Off / Leave")
+                        views.setViewVisibility(R.id.widget_curr_status, View.VISIBLE)
+                        views.setTextViewText(R.id.widget_curr_status, "Marked Off ($offCount classes)")
+                        views.setTextColor(R.id.widget_curr_status, android.graphics.Color.parseColor("#FFB300"))
+                    } else if (records.isNotEmpty()) {
+                        views.setTextViewText(R.id.widget_curr_subject, "Daily Summary")
+                        views.setViewVisibility(R.id.widget_curr_status, View.VISIBLE)
+                        views.setTextViewText(R.id.widget_curr_status, "Attended: $attCount • Missed: $missCount • Off: $offCount")
+                        views.setTextColor(R.id.widget_curr_status, android.graphics.Color.WHITE)
+                    } else {
+                        views.setTextViewText(R.id.widget_curr_subject, "No Classes")
+                        views.setViewVisibility(R.id.widget_curr_status, View.VISIBLE)
+                        views.setTextViewText(R.id.widget_curr_status, "All classes over")
+                        views.setTextColor(R.id.widget_curr_status, android.graphics.Color.parseColor("#4CAF50"))
+                    }
                     views.setViewVisibility(R.id.widget_curr_countdown, View.GONE)
                 }
 

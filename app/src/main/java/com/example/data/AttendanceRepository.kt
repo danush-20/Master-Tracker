@@ -9,11 +9,35 @@ class AttendanceRepository(private val dao: AttendanceDao) {
     val allSettings: Flow<List<AppSetting>> = dao.getAllSettings()
     val allTasks: Flow<List<Task>> = dao.getAllTasks()
     val allCustomPeriods: Flow<List<CustomPeriod>> = dao.getAllCustomPeriods()
+    val allCaMarks: Flow<List<CaMark>> = dao.getAllCaMarks()
 
     suspend fun getAllSubjectsList(): List<Subject> = dao.getAllSubjectsList()
     suspend fun getAllCustomPeriodsList(): List<CustomPeriod> = dao.getAllCustomPeriodsList()
     suspend fun getAllTimetableSlotsList(): List<TimetableSlot> = dao.getAllTimetableSlotsList()
     suspend fun getAllAttendanceRecordsList(): List<AttendanceRecord> = dao.getAllAttendanceRecordsList()
+    suspend fun getAllCaMarksList(): List<CaMark> = dao.getAllCaMarksList()
+
+    // CA Marks operations
+    suspend fun saveCaMark(subjectId: Int, ca1Marks: Double?, ca1Total: Double?, ca2Marks: Double?, ca2Total: Double?) {
+        val existing = dao.getCaMarkForSubject(subjectId)
+        val mark = CaMark(
+            id = existing?.id ?: 0,
+            subjectId = subjectId,
+            ca1Marks = ca1Marks,
+            ca1Total = ca1Total,
+            ca2Marks = ca2Marks,
+            ca2Total = ca2Total
+        )
+        dao.insertOrUpdateCaMark(mark)
+    }
+
+    suspend fun deleteCaMarkBySubject(subjectId: Int) {
+        dao.deleteCaMarkBySubjectId(subjectId)
+    }
+
+    suspend fun deleteCaMarkById(id: Int) {
+        dao.deleteCaMarkById(id)
+    }
 
     // Tasks operations
     suspend fun insertTask(task: Task) {
@@ -138,7 +162,8 @@ class AttendanceRepository(private val dao: AttendanceDao) {
             attendanceRecords = dao.getAllAttendanceRecordsList(),
             settings = dao.getAllSettingsList(),
             tasks = dao.getAllTasksList(),
-            customPeriods = dao.getAllCustomPeriodsList()
+            customPeriods = dao.getAllCustomPeriodsList(),
+            caMarks = dao.getAllCaMarksList()
         )
     }
 
@@ -150,6 +175,7 @@ class AttendanceRepository(private val dao: AttendanceDao) {
         dao.clearSubjects()
         dao.clearSettings()
         dao.clearCustomPeriods()
+        dao.clearCaMarks()
 
         dao.insertSubjects(exportData.subjects)
         dao.insertTimetableSlots(exportData.timetableSlots)
@@ -157,5 +183,9 @@ class AttendanceRepository(private val dao: AttendanceDao) {
         dao.insertSettings(exportData.settings)
         dao.insertTasks(exportData.tasks)
         dao.insertCustomPeriods(exportData.customPeriods)
+        if (exportData.caMarks.isNotEmpty()) {
+            dao.insertCaMarks(exportData.caMarks)
+        }
     }
 }
+

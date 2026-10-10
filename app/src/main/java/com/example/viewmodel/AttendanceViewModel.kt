@@ -28,6 +28,29 @@ data class TodaySubjectState(
     val record: AttendanceRecord?
 )
 
+data class SubjectCaMarkItem(
+    val subject: Subject,
+    val caMark: CaMark?,
+    val ca1Marks: Double?,
+    val ca1Total: Double?,
+    val ca1Pct: Double?,
+    val ca2Marks: Double?,
+    val ca2Total: Double?,
+    val ca2Pct: Double?,
+    val totalObtained: Double,
+    val totalMax: Double,
+    val overallPct: Double?,
+    val hasMarks: Boolean
+)
+
+data class CaOverallMetrics(
+    val totalObtained: Double,
+    val totalMax: Double,
+    val overallPercentage: Double?,
+    val subjectsEvaluated: Int,
+    val totalSubjects: Int
+)
+
 class AttendanceViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AttendanceDatabase.getDatabase(application)
     private val repository = AttendanceRepository(database.attendanceDao())
@@ -466,54 +489,104 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    // --- TASK MANAGER STATE & OPERATIONS ---
+    // --- CA MARKS STATE & OPERATIONS ---
+    val caMarks: StateFlow<List<CaMark>> = repository.allCaMarks.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = emptyList()
+    )
+
+    val subjectCaMarkItems: StateFlow<List<SubjectCaMarkItem>> = combine(
+        subjects,
+        caMarks
+    ) { subList, markList ->
+        subList.map { subj ->
+            val mark = markList.find { it.subjectId == subj.id }
+            val ca1M = mark?.ca1Marks
+            val ca1T = mark?.ca1Total
+            val ca1Pct = if (ca1M != null && ca1T != null && ca1T > 0) (ca1M / ca1T) * 100.0 else null
+
+            val ca2M = mark?.ca2Marks
+            val ca2T = mark?.ca2Total
+            val ca2Pct = if (ca2M != null && ca2T != null && ca2T > 0) (ca2M / ca2T) * 100.0 else null
+
+            var obtained = 0.0
+            var maxTot = 0.0
+            var hasAny = false
+
+            if (ca1M != null && ca1T != null && ca1T > 0) {
+                obtained += ca1M
+                maxTot += ca1T
+                hasAny = true
+            }
+            if (ca2M != null && ca2T != null && ca2T > 0) {
+                obtained += ca2M
+                maxTot += ca2T
+                hasAny = true
+            }
+
+            val overall = if (hasAny && maxTot > 0) (obtained / maxTot) * 100.0 else null
+
+            SubjectCaMarkItem(
+                subject = subj,
+                caMark = mark,
+                ca1Marks = ca1M,
+                ca1Total = ca1T,
+                ca1Pct = ca1Pct,
+                ca2Marks = ca2M,
+                ca2Total = ca2T,
+                ca2Pct = ca2Pct,
+                totalObtained = obtained,
+                totalMax = maxTot,
+                overallPct = overall,
+                hasMarks = hasAny
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val caOverallMetrics: StateFlow<CaOverallMetrics> = subjectCaMarkItems.map { items ->
+        var totalObt = 0.0
+        var totalMax = 0.0
+        var count = 0
+
+        for (item in items) {
+            if (item.hasMarks && item.totalMax > 0) {
+                totalObt += item.totalObtained
+                totalMax += item.totalMax
+                count++
+            }
+        }
+
+        val overallPct = if (totalMax > 0) (totalObt / totalMax) * 100.0 else null
+
+        CaOverallMetrics(
+            totalObtained = totalObt,
+            totalMax = totalMax,
+            overallPercentage = overallPct,
+            subjectsEvaluated = count,
+            totalSubjects = items.size
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, CaOverallMetrics(0.0, 0.0, null, 0, 0))
+
+    fun saveCaMarks(subjectId: Int, ca1Marks: Double?, ca1Total: Double?, ca2Marks: Double?, ca2Total: Double?) {
+        viewModelScope.launch {
+            repository.saveCaMark(subjectId, ca1Marks, ca1Total, ca2Marks, ca2Total)
+        }
+    }
+
+    fun deleteCaMarks(subjectId: Int) {
+        viewModelScope.launch {
+            repository.deleteCaMarkBySubject(subjectId)
+        }
+    }
+
+    // Retained for database compatibility if needed
     val tasks: StateFlow<List<Task>> = repository.allTasks.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = emptyList()
     )
 
-    fun addTask(title: String, subjectId: Int?, priority: String, fuzzyPeriod: String?, note: String) {
-        viewModelScope.launch {
-            repository.insertTask(
-                Task(
-                    title = title,
-                    subjectId = subjectId,
-                    priority = priority,
-                    fuzzyPeriod = fuzzyPeriod,
-                    note = note,
-                    isCompleted = false
-                )
-            )
-        }
-    }
-
-    fun updateTaskDetails(task: Task) {
-        viewModelScope.launch {
-            repository.updateTask(task)
-        }
-    }
-
-    fun toggleTaskCompletion(task: Task) {
-        viewModelScope.launch {
-            repository.updateTask(task.copy(isCompleted = !task.isCompleted))
-        }
-    }
-
-    fun deleteTask(task: Task) {
-        viewModelScope.launch {
-            repository.deleteTask(task)
-        }
-    }
-
-    fun clearCompletedTasks() {
-        viewModelScope.launch {
-            val completed = tasks.value.filter { it.isCompleted }
-            for (task in completed) {
-                repository.deleteTask(task)
-            }
-        }
-    }
 
     // Populate standard sample entries for fresh visual appeal
     fun populateDemoData() {

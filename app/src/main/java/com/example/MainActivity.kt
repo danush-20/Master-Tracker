@@ -28,7 +28,7 @@ import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.AttendanceViewModel
 
 enum class MainTab {
-    ATTENDANCE, TASKS, SETTINGS
+    ATTENDANCE, CA_MARKS, SETTINGS
 }
 
 enum class AttendanceSubTab {
@@ -39,12 +39,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
-            }
-        }
         
         setContent {
             MyApplicationTheme(darkTheme = true) { // Enforce standard beautiful dark slate UI
@@ -64,18 +58,6 @@ fun MainScreen() {
     var currentTab by remember { mutableStateOf(MainTab.ATTENDANCE) }
     var currentSubTab by remember { mutableStateOf(AttendanceSubTab.TODAY) }
     val viewModel: AttendanceViewModel = viewModel()
-    
-    val mTime by viewModel.morningTime.collectAsState()
-    val mEnabled by viewModel.morningEnabled.collectAsState()
-    val eTime by viewModel.eveningTime.collectAsState()
-    val eEnabled by viewModel.eveningEnabled.collectAsState()
-    val nTime by viewModel.nightTime.collectAsState()
-    val nEnabled by viewModel.nightEnabled.collectAsState()
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    LaunchedEffect(mTime, mEnabled, eTime, eEnabled, nTime, nEnabled) {
-        com.example.receiver.AlarmScheduler.scheduleAlarms(context, mTime, mEnabled, eTime, eEnabled, nTime, nEnabled)
-    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -102,12 +84,12 @@ fun MainScreen() {
                     modifier = Modifier.testTag("nav_attendance")
                 )
 
-                // TASKS TAB
+                // CA MARKS TAB
                 NavigationBarItem(
-                    selected = currentTab == MainTab.TASKS,
-                    onClick = { currentTab = MainTab.TASKS },
-                    icon = { Icon(Icons.Default.TaskAlt, contentDescription = "Tasks") },
-                    label = { Text("Tasks", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    selected = currentTab == MainTab.CA_MARKS,
+                    onClick = { currentTab = MainTab.CA_MARKS },
+                    icon = { Icon(Icons.Default.Assessment, contentDescription = "CA Marks") },
+                    label = { Text("CA Marks", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
                         selectedTextColor = Color.White,
@@ -115,7 +97,7 @@ fun MainScreen() {
                         unselectedTextColor = Color.Gray,
                         indicatorColor = Color(0xFF4F46E5)
                     ),
-                    modifier = Modifier.testTag("nav_tasks")
+                    modifier = Modifier.testTag("nav_ca_marks")
                 )
 
                 // SETTINGS TAB
@@ -241,7 +223,7 @@ fun MainScreen() {
                             AttendanceSubTab.SUBJECTS -> SubjectsScreen(viewModel = viewModel)
                         }
                     }
-                    MainTab.TASKS -> TaskScreen(viewModel = viewModel)
+                    MainTab.CA_MARKS -> CAMarksScreen(viewModel = viewModel)
                     MainTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
                 }
             }

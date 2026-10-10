@@ -144,4 +144,30 @@ interface AttendanceDao {
 
     @Query("SELECT * FROM tasks")
     suspend fun getAllTasksList(): List<Task>
+
+    // CA Marks queries
+    @Query("SELECT * FROM ca_marks")
+    fun getAllCaMarks(): Flow<List<CaMark>>
+
+    @Query("SELECT * FROM ca_marks")
+    suspend fun getAllCaMarksList(): List<CaMark>
+
+    @Query("SELECT * FROM ca_marks WHERE subjectId = :subjectId LIMIT 1")
+    suspend fun getCaMarkForSubject(subjectId: Int): CaMark?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateCaMark(caMark: CaMark): Long
+
+    @Query("DELETE FROM ca_marks WHERE id = :id")
+    suspend fun deleteCaMarkById(id: Int)
+
+    @Query("DELETE FROM ca_marks WHERE subjectId = :subjectId")
+    suspend fun deleteCaMarkBySubjectId(subjectId: Int)
+
+    @Query("DELETE FROM ca_marks")
+    suspend fun clearCaMarks()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCaMarks(marks: List<CaMark>)
 }
+

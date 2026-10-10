@@ -75,13 +75,6 @@ fun SettingsScreen(
     val targetPct by viewModel.targetPercentage.collectAsState()
     var sliderValue by remember(targetPct) { mutableStateOf(targetPct.toFloat()) }
 
-    val mTime by viewModel.morningTime.collectAsState()
-    val mEnabled by viewModel.morningEnabled.collectAsState()
-    val eTime by viewModel.eveningTime.collectAsState()
-    val eEnabled by viewModel.eveningEnabled.collectAsState()
-    val nTime by viewModel.nightTime.collectAsState()
-    val nEnabled by viewModel.nightEnabled.collectAsState()
-
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -154,60 +147,54 @@ fun SettingsScreen(
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF282F3B)),
                 shape = RoundedCornerShape(20.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(
-                                androidx.compose.ui.graphics.Brush.linearGradient(
-                                    listOf(Color(0xFF8B2C82), Color(0xFFBA68C8))
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
+                    Text(
+                        text = "ABOUT US",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFBA68C8),
+                        letterSpacing = 1.2.sp
+                    )
+                    Text(
+                        text = "A danush",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "AD",
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "ABOUT US",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFBA68C8),
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "A DANUSH",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = Color(0xFF4F46E5).copy(alpha = 0.25f),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4F46E5).copy(alpha = 0.5f))
                         ) {
                             Text(
-                                text = "MCA SS TechOps",
-                                fontSize = 11.sp,
+                                text = "MCA-SS",
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFA5B4FC),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFF0284C7).copy(alpha = 0.25f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF0284C7).copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = "TechOps",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF38BDF8),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
                     }
@@ -265,141 +252,6 @@ fun SettingsScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-            }
-
-            // Global Notification Intervals Configuration
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Global Notification Intervals",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
-                    Text(
-                        text = "Configure native alarm manager intervals for fuzzy task deadlines.",
-                        color = Color.Gray,
-                        fontSize = 13.sp
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Morning Trigger:", color = Color.White, fontSize = 14.sp)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Switch(
-                                checked = mEnabled,
-                                onCheckedChange = { 
-                                    viewModel.toggleMorningEnabled(it)
-                                    val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-                                    com.example.receiver.AlarmScheduler.scheduleAlarm(context, alarmManager, mTime, it, 1)
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                onClick = { 
-                                    showTimePicker(context, mTime) { 
-                                        viewModel.updateMorningTime(it)
-                                        val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-                                        com.example.receiver.AlarmScheduler.scheduleAlarm(context, alarmManager, it, mEnabled, 1)
-                                    } 
-                                },
-                                color = Color.Transparent
-                            ) {
-                                Text(
-                                    text = mTime,
-                                    color = Color(0xFF4F46E5),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Evening Trigger:", color = Color.White, fontSize = 14.sp)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Switch(
-                                checked = eEnabled,
-                                onCheckedChange = { 
-                                    viewModel.toggleEveningEnabled(it)
-                                    val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-                                    com.example.receiver.AlarmScheduler.scheduleAlarm(context, alarmManager, eTime, it, 2)
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                onClick = { 
-                                    showTimePicker(context, eTime) { 
-                                        viewModel.updateEveningTime(it)
-                                        val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-                                        com.example.receiver.AlarmScheduler.scheduleAlarm(context, alarmManager, it, eEnabled, 2)
-                                    } 
-                                },
-                                color = Color.Transparent
-                            ) {
-                                Text(
-                                    text = eTime,
-                                    color = Color(0xFF4F46E5),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Night Trigger:", color = Color.White, fontSize = 14.sp)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Switch(
-                                checked = nEnabled,
-                                onCheckedChange = { 
-                                    viewModel.toggleNightEnabled(it)
-                                    val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-                                    com.example.receiver.AlarmScheduler.scheduleAlarm(context, alarmManager, nTime, it, 3)
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                onClick = { 
-                                    showTimePicker(context, nTime) { 
-                                        viewModel.updateNightTime(it)
-                                        val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-                                        com.example.receiver.AlarmScheduler.scheduleAlarm(context, alarmManager, it, nEnabled, 3)
-                                    } 
-                                },
-                                color = Color.Transparent
-                            ) {
-                                Text(
-                                    text = nTime,
-                                    color = Color(0xFF4F46E5),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
-                        }
-                    }
                 }
             }
 

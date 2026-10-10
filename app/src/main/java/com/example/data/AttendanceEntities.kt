@@ -104,12 +104,36 @@ data class Task(
 )
 
 @JsonClass(generateAdapter = true)
+@Entity(
+    tableName = "ca_marks",
+    foreignKeys = [
+        ForeignKey(
+            entity = Subject::class,
+            parentColumns = ["id"],
+            childColumns = ["subjectId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("subjectId", unique = true)]
+)
+data class CaMark(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val subjectId: Int,
+    val ca1Marks: Double? = null,
+    val ca1Total: Double? = null,
+    val ca2Marks: Double? = null,
+    val ca2Total: Double? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class ExportData(
     val subjects: List<Subject>,
     val timetableSlots: List<TimetableSlot>,
     val attendanceRecords: List<AttendanceRecord>,
     val settings: List<AppSetting>,
-    val tasks: List<Task>,
-    val customPeriods: List<CustomPeriod> = emptyList()
+    val tasks: List<Task> = emptyList(),
+    val customPeriods: List<CustomPeriod> = emptyList(),
+    val caMarks: List<CaMark> = emptyList()
 )
+
 
