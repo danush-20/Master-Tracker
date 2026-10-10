@@ -1,0 +1,6 @@
+{
+  "name": "Master Tracker",
+  "description": "An elegant and professional offline attendance, timetable scheduling, and monthly calendar metrics tracker with daily shortcuts and home screen widget support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

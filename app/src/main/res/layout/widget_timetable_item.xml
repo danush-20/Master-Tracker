@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_item_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/widget_item_bg"
+    android:padding="16dp"
+    android:layout_marginBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/widget_item_subject"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Full Stack"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/widget_item_period"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Period 1 • 09:00"
+                android:textColor="#B0B0B0"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp"/>
+            <Chronometer
+                android:id="@+id/widget_item_countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="#4CAF50"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_actions_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            
+            <TextView
+                android:id="@+id/widget_btn_miss"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="✕"
+                android:textSize="18sp"
+                android:textColor="#E91E63"
+                android:gravity="center"
+                android:background="@drawable/widget_btn_bg"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/widget_btn_off"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="OFF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#FFB300"
+                android:gravity="center"
+                android:background="@drawable/widget_btn_bg"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/widget_btn_att"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="✓"
+                android:textSize="18sp"
+                android:textColor="#4CAF50"
+                android:gravity="center"
+                android:background="@drawable/widget_btn_bg" />
+        </LinearLayout>
+        
+        <TextView
+            android:id="@+id/widget_status_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#4CAF50"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</LinearLayout>

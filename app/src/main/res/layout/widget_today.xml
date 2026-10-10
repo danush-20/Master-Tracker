@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0F1216"
+    android:padding="12dp">
+
+    <!-- Top Header Layout with Clear High-Contrast Title and Date -->
+    <LinearLayout
+        android:id="@+id/widget_title_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Daily Attendance"
+                android:textColor="#FFFFFF"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_date_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Checking Schedule..."
+                android:textColor="#BA68C8"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginTop="2dp" />
+
+            <TextView
+                android:id="@+id/widget_summary_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Today's Timetable"
+                android:textColor="#94A3B8"
+                android:textSize="11sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/widget_btn_refresh"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:padding="4dp"
+            android:src="@drawable/ic_refresh"
+            android:contentDescription="Refresh"
+            android:tint="#FFFFFF"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2C323F"
+        android:layout_marginBottom="6dp"/>
+
+    <!-- Dynamic empty state placeholder -->
+    <TextView
+        android:id="@+id/widget_empty_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No classes scheduled today.\nTap here to setup timetable."
+        android:textColor="#808080"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:visibility="gone"
+        android:layout_marginTop="8dp" />
+
+    <!-- Scrollable List of timetable slots -->
+    <ListView
+        android:id="@+id/widget_list_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="@null"
+        android:dividerHeight="0dp" />
+
+</LinearLayout>
