@@ -42,6 +42,7 @@ fun TimetableScreen(
 
     var showAddSlotDialog by remember { mutableStateOf(false) }
     var selectedSubjectId by remember { mutableStateOf<Int?>(null) }
+    var selectedClassType by remember { mutableStateOf("Lecture") } // "Lecture" or "Lab"
     var inputPeriodName by remember { mutableStateOf("Period 1") }
     var slotToEdit by remember { mutableStateOf<TimetableSlot?>(null) }
 
@@ -71,6 +72,8 @@ fun TimetableScreen(
                             slotToEdit = null
                             if (subjectsList.isNotEmpty()) {
                                 selectedSubjectId = subjectsList.first().id
+                                val firstSubj = subjectsList.first()
+                                selectedClassType = "Lecture"
                                 showAddSlotDialog = true
                             } else {
                                 showAddSlotDialog = true
@@ -123,14 +126,14 @@ fun TimetableScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Timetable lists
+            // Timetable slots list
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (slotsForSelectedDay.isEmpty()) {
                     item {
@@ -138,89 +141,107 @@ fun TimetableScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 32.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text(
-                                    text = "🗓️",
-                                    fontSize = 44.sp
-                                )
-                                Text(
-                                    text = "Empty Schedule",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "You don't have any classes scheduled for this day yet. Click the '+' icon at the top to add one.",
-                                    fontSize = 13.sp,
-                                    color = Color.Gray,
-                                    textAlign = TextAlign.Center
-                                )
+                                Text("📅", fontSize = 44.sp)
+                                Text("No Classes Planned", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                                Text("Tap the '+' button above to schedule periods for ${daysOfWeek[selectedDayIndex - 1]}.", fontSize = 13.sp, color = Color.Gray, textAlign = TextAlign.Center)
                             }
                         }
                     }
-                } else {
-                    items(slotsForSelectedDay, key = { it.id }) { slot ->
-                        val subject = subjectsList.find { it.id == slot.subjectId }
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                            shape = RoundedCornerShape(12.dp)
+                }
+
+                items(slotsForSelectedDay, key = { it.id }) { slot ->
+                    val subject = subjectsList.find { it.id == slot.subjectId }
+                    val isLabSlot = slot.classType.equals("Lab", ignoreCase = true)
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Icons.Default.Schedule,
-                                        contentDescription = "Period",
-                                        tint = Color(0xFF4F46E5),
-                                        modifier = Modifier.size(24.dp)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = subject?.name ?: "Unknown Subject",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = Color.White
                                     )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
+                                    // Class type indicator (Lecture or Lab)
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = if (isLabSlot) Color(0xFF7C3AED).copy(alpha = 0.25f) else Color(0xFF0284C7).copy(alpha = 0.25f),
+                                        border = BorderStroke(1.dp, if (isLabSlot) Color(0xFF7C3AED) else Color(0xFF0284C7))
+                                    ) {
                                         Text(
-                                            text = subject?.name ?: "Unknown Subject",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = "${slot.periodName} (${slot.startTime} - ${slot.endTime})",
-                                            fontSize = 13.sp,
-                                            color = Color.Gray
+                                            text = if (isLabSlot) "LAB" else "LECTURE",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = if (isLabSlot) Color(0xFFA78BFA) else Color(0xFF38BDF8),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
-                                Row {
-                                    IconButton(onClick = { 
-                                        slotToEdit = slot 
-                                        showAddSlotDialog = true 
-                                    }) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Edit Slot",
-                                            tint = Color(0xFF4F46E5)
-                                        )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = slot.periodName,
+                                        fontSize = 13.sp,
+                                        color = Color.LightGray,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "•",
+                                        fontSize = 12.sp,
+                                        color = Color.Gray
+                                    )
+                                    Text(
+                                        text = "${slot.startTime} - ${slot.endTime}",
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF4CAF50),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+
+                            Row {
+                                IconButton(
+                                    onClick = {
+                                        slotToEdit = slot
+                                        selectedSubjectId = slot.subjectId
+                                        inputPeriodName = slot.periodName
+                                        selectedClassType = slot.classType
+                                        showAddSlotDialog = true
                                     }
-                                    IconButton(onClick = { viewModel.deleteTimetableSlot(slot) }) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Delete Slot",
-                                            tint = Color(0xFFE91E63)
-                                        )
-                                    }
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit Slot", tint = Color.Gray)
+                                }
+                                IconButton(
+                                    onClick = { viewModel.deleteTimetableSlot(slot) }
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Slot", tint = Color(0xFFE91E63))
                                 }
                             }
                         }
@@ -230,12 +251,20 @@ fun TimetableScreen(
         }
     }
 
-    // Add slot dialog
+    // Add or Edit slot dialog
     if (showAddSlotDialog) {
-        var inputPeriodName by remember(slotToEdit) { mutableStateOf(slotToEdit?.periodName ?: "Period 1") }
         var slotEditStartTime by remember(slotToEdit) { mutableStateOf(slotToEdit?.startTime ?: "09:00 AM") }
         var slotEditEndTime by remember(slotToEdit) { mutableStateOf(slotToEdit?.endTime ?: "10:00 AM") }
         val context = androidx.compose.ui.platform.LocalContext.current
+
+        val currentSubject = subjectsList.find { it.id == selectedSubjectId } ?: subjectsList.firstOrNull()
+
+        // If the subject is not lab-integrated, strictly keep classType as "Lecture"
+        LaunchedEffect(currentSubject) {
+            if (currentSubject != null && !currentSubject.isLabIntegrated) {
+                selectedClassType = "Lecture"
+            }
+        }
 
         AlertDialog(
             onDismissRequest = { showAddSlotDialog = false },
@@ -246,7 +275,7 @@ fun TimetableScreen(
                     Text("Before defining a weekly schedule, you must add subjects in the Subj tab first.", color = Color.Gray)
                 } else {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Day: ${daysOfWeek[selectedDayIndex - 1]}", color = Color.LightGray, fontWeight = FontWeight.Medium)
@@ -254,7 +283,6 @@ fun TimetableScreen(
                         Text("Course:", color = Color.Gray, fontSize = 12.sp)
                         // Dropdown Selector simple version
                         var expanded by remember { mutableStateOf(false) }
-                        val currentSubject = subjectsList.find { it.id == selectedSubjectId } ?: subjectsList.first()
                         
                         Box(modifier = Modifier.fillMaxWidth()) {
                             Surface(
@@ -265,11 +293,24 @@ fun TimetableScreen(
                                 color = Color(0xFF2C323F),
                                 border = BorderStroke(1.dp, Color.Gray)
                             ) {
-                                Text(
-                                    currentSubject.name,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(14.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        currentSubject?.name ?: "Select Subject",
+                                        color = Color.White
+                                    )
+                                    if (currentSubject?.isLabIntegrated == true) {
+                                        Text(
+                                            "Lab Integrated",
+                                            color = Color(0xFFA5B4FC),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
                             DropdownMenu(
                                 expanded = expanded,
@@ -278,11 +319,68 @@ fun TimetableScreen(
                             ) {
                                 subjectsList.forEach { subj ->
                                     DropdownMenuItem(
-                                        text = { Text(subj.name, color = Color.White) },
+                                        text = { 
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(subj.name, color = Color.White)
+                                                if (subj.isLabIntegrated) {
+                                                    Text(" (Lab Integrated)", color = Color(0xFFA5B4FC), fontSize = 11.sp)
+                                                }
+                                            }
+                                        },
                                         onClick = {
                                             selectedSubjectId = subj.id
+                                            if (!subj.isLabIntegrated) {
+                                                selectedClassType = "Lecture"
+                                            }
                                             expanded = false
                                         }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Component Selection: ONLY shown for Lab Integrated Papers!
+                        if (currentSubject?.isLabIntegrated == true) {
+                            Text("Class Component (Lab Integrated Paper):", color = Color(0xFFA5B4FC), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (selectedClassType == "Lecture") Color(0xFF0284C7) else Color(0xFF2C323F),
+                                    border = BorderStroke(1.dp, if (selectedClassType == "Lecture") Color(0xFF38BDF8) else Color.Gray),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { selectedClassType = "Lecture" }
+                                ) {
+                                    Text(
+                                        text = "📖 Lecture",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 10.dp)
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (selectedClassType == "Lab") Color(0xFF7C3AED) else Color(0xFF2C323F),
+                                    border = BorderStroke(1.dp, if (selectedClassType == "Lab") Color(0xFFA78BFA) else Color.Gray),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { selectedClassType = "Lab" }
+                                ) {
+                                    Text(
+                                        text = "🧪 Lab",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 10.dp)
                                     )
                                 }
                             }
@@ -345,6 +443,7 @@ fun TimetableScreen(
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
+
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Start:", color = Color.Gray, fontSize = 12.sp)
@@ -378,13 +477,16 @@ fun TimetableScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5)),
                         onClick = {
                             val subId = selectedSubjectId ?: subjectsList.first().id
+                            val finalClassType = if (currentSubject?.isLabIntegrated == true) selectedClassType else "Lecture"
+
                             if (slotToEdit != null) {
                                 viewModel.updateTimetableSlot(
                                     slotToEdit!!.copy(
                                         subjectId = subId,
                                         startTime = slotEditStartTime,
                                         periodName = inputPeriodName,
-                                        endTime = slotEditEndTime
+                                        endTime = slotEditEndTime,
+                                        classType = finalClassType
                                     )
                                 )
                             } else {
@@ -393,7 +495,8 @@ fun TimetableScreen(
                                     subjectId = subId,
                                     startTime = slotEditStartTime,
                                     periodName = inputPeriodName,
-                                    endTime = slotEditEndTime
+                                    endTime = slotEditEndTime,
+                                    classType = finalClassType
                                 )
                             }
                             showAddSlotDialog = false

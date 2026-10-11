@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,20 +47,19 @@ fun TodayScreen(
     val totalBunked by viewModel.totalBunkedCount.collectAsState()
     val subjectsList by viewModel.subjects.collectAsState()
     val customPeriods by viewModel.customPeriods.collectAsState()
-
     val context = LocalContext.current
+
     var showAddExtraDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
-
     var selectedExtraSubjectId by remember { mutableStateOf<Int?>(null) }
-    var selectedExtraPeriodId by remember { mutableStateOf<Int?>(null) }
+    var selectedExtraClassType by remember { mutableStateOf("Lecture") } // "Lecture" or "Lab"
 
     val isToday = selectedDate == LocalDate.now()
 
     LaunchedEffect(showAddExtraDialog) {
-        if (showAddExtraDialog) {
-            if (subjectsList.isNotEmpty()) selectedExtraSubjectId = subjectsList.first().id
-            if (customPeriods.isNotEmpty()) selectedExtraPeriodId = customPeriods.first().id
+        if (showAddExtraDialog && subjectsList.isNotEmpty()) {
+            selectedExtraSubjectId = subjectsList.first().id
+            selectedExtraClassType = "Lecture"
         }
     }
 
@@ -97,6 +97,7 @@ fun TodayScreen(
                             Text("Today", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
+
                     // Overall Percentage Badge
                     overallStats?.let { stats ->
                         Surface(
@@ -108,33 +109,21 @@ fun TodayScreen(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val isSafe = stats.percentage >= targetPct
                                 Text(
-                                    text = String.format("%.2f%%", stats.percentage),
+                                    text = String.format("%.1f%%", stats.percentage),
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (stats.percentage >= targetPct) Color(0xFF4CAF50) else Color(0xFFE91E63),
-                                    fontSize = 14.sp
+                                    color = if (isSafe) Color(0xFF4CAF50) else Color(0xFFE91E63)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "|",
-                                    color = Color.Gray,
-                                    fontSize = 14.sp
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "${targetPct.toInt()}%",
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.White,
-                                    fontSize = 14.sp
+                                    text = "/ ${targetPct.toInt()}%",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
                                 )
                             }
                         }
-                    }
-                    IconButton(
-                        onClick = { showAddExtraDialog = true },
-                        modifier = Modifier.testTag("add_extra_button")
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Extra Class", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -149,248 +138,223 @@ fun TodayScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Quick Day Actions (Moved to Top of Screen, Compact & Modern Pill UI)
-            if (todaySubjects.isNotEmpty()) {
-                item {
+            item {
+                Spacer(modifier = Modifier.height(2.dp))
+            }
+
+            // Top Action Bar: Add Extra Class and Full Leave
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (subjectsList.isEmpty()) {
+                                android.widget.Toast.makeText(context, "Add subjects first in Stats tab", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                showAddExtraDialog = true
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .testTag("btn_top_extra_class"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4F46E5),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Add Extra Class", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = { showLeaveDialog = true },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .testTag("btn_top_full_leave"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD97706),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.EventBusy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Full Leave", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Date Navigation Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E222B))
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 2.dp, bottom = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Full Day Attended Pill
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(30.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.markFullDayStatus("ATTENDED")
-                                    android.widget.Toast.makeText(context, "Full day marked as Attended!", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                                .testTag("btn_full_day_attended"),
-                            color = Color(0xFF1B3822),
-                            border = BorderStroke(1.dp, Color(0xFF2E7D32).copy(alpha = 0.6f)),
-                            shape = RoundedCornerShape(8.dp)
+                        IconButton(
+                            onClick = { viewModel.navigateDate(-1) },
+                            modifier = Modifier.testTag("prev_day_button")
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color(0xFF81C784),
-                                    modifier = Modifier.size(13.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Full Attended",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFC8E6C9),
-                                    maxLines = 1
-                                )
-                            }
+                            Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Previous Day", tint = Color.LightGray, modifier = Modifier.size(18.dp))
                         }
 
-                        // Full Day Leave Pill
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(30.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    showLeaveDialog = true
-                                }
-                                .testTag("btn_full_day_leave"),
-                            color = Color(0xFF382314),
-                            border = BorderStroke(1.dp, Color(0xFFF57C00).copy(alpha = 0.6f)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.EventBusy,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFFB74D),
-                                    modifier = Modifier.size(13.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Full Leave",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFFE0B2),
-                                    maxLines = 1
-                                )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.clickable {
+                                val now = selectedDate
+                                android.app.DatePickerDialog(
+                                    context,
+                                    { _, year, month, dayOfMonth ->
+                                        viewModel.selectDate(LocalDate.of(year, month + 1, dayOfMonth))
+                                    },
+                                    now.year,
+                                    now.monthValue - 1,
+                                    now.dayOfMonth
+                                ).show()
                             }
-                        }
-
-                        // Compact Reset Pill
-                        Surface(
-                            modifier = Modifier
-                                .height(30.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.clearFullDayAttendance()
-                                    android.widget.Toast.makeText(context, "Cleared attendance for this day", android.widget.Toast.LENGTH_SHORT).show()
-                                },
-                            color = Color(0xFF1B1F28),
-                            border = BorderStroke(1.dp, Color(0xFF2E384D)),
-                            shape = RoundedCornerShape(8.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxHeight().padding(horizontal = 10.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Reset",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF9CA3AF)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Date Navigation Row
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { viewModel.navigateDate(-1) }) {
-                        Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Previous Day", tint = Color.Gray)
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = formattedDate,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (totalBunked > 0) Color(0xFFE91E63) else Color(0xFF4CAF50))
+                            Text(
+                                text = formattedDate,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.White
                             )
                             Text(
-                                text = "Bunked total: $totalBunked classes",
-                                fontSize = 12.sp,
-                                color = Color.Gray
+                                text = if (isToday) "Today" else "Tap to change date",
+                                fontSize = 11.sp,
+                                color = if (isToday) Color(0xFF4CAF50) else Color.Gray,
+                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                             )
                         }
-                    }
-                    IconButton(onClick = { viewModel.navigateDate(1) }) {
-                        Icon(Icons.Default.ArrowForwardIos, contentDescription = "Next Day", tint = Color.Gray)
+
+                        IconButton(
+                            onClick = { viewModel.navigateDate(1) },
+                            modifier = Modifier.testTag("next_day_button")
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "Next Day", tint = Color.LightGray, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }
 
-            // Subject cards listed today
+            // Quick Mark All Actions on the Screen
+            if (todaySubjects.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.markFullDayStatus("ATTENDED") },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("All Present", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF81C784))
+                        }
+                        Button(
+                            onClick = { viewModel.markFullDayStatus("MISSED") },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("All Missed", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE57373))
+                        }
+                        Button(
+                            onClick = { viewModel.clearFullDayAttendance() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF374151)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Reset", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.LightGray)
+                        }
+                    }
+                }
+            }
+
+            // Empty state placeholder
             if (todaySubjects.isEmpty()) {
                 item {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+                            .padding(vertical = 24.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E222B))
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            Text(text = "🎉", fontSize = 44.sp)
                             Text(
-                                text = "📅",
-                                fontSize = 48.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "No Scheduled Classes Today",
+                                text = "No Classes Scheduled Today",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = Color.White,
-                                textAlign = TextAlign.Center
+                                color = Color.White
                             )
                             Text(
-                                text = "You haven't set up a timetable slot for this day or added any extra classes yet.",
+                                text = "Enjoy your day off, or add an extra class above.",
                                 fontSize = 13.sp,
                                 color = Color.Gray,
                                 textAlign = TextAlign.Center
                             )
-                            Button(
-                                onClick = onNavigateToSubjects,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5)),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.padding(top = 8.dp)
-                            ) {
-                                Text("Configure Timetable")
-                            }
                         }
                     }
                 }
-            } else {
-                items(todaySubjects, key = { itemState -> itemState.id }) { itemState ->
-                    TodaySubjectCard(
-                        itemState = itemState,
-                        targetPct = targetPct,
-                        isToday = isToday,
-                        onMark = { status ->
-                            if (itemState.isExtra) {
-                                itemState.record?.let { rec ->
-                                    viewModel.updateExtraAttendance(rec.id, status)
-                                }
-                            } else {
-                                itemState.slot?.let {
-                                    viewModel.markRegularAttendance(itemState.subject.id, it.id, status)
-                                }
-                            }
-                        },
-                        onClear = {
-                            if (itemState.isExtra) {
-                                itemState.record?.let { rec ->
-                                    viewModel.clearExtraAttendanceById(rec.id)
-                                }
-                            } else {
-                                itemState.slot?.let {
-                                    viewModel.clearRegularAttendance(itemState.subject.id, it.id)
-                                }
-                            }
+            }
+
+            // List of Today's Scheduled and Extra Classes
+            items(todaySubjects, key = { it.id }) { itemState ->
+                TodaySubjectCard(
+                    itemState = itemState,
+                    isToday = isToday,
+                    targetPct = targetPct,
+                    onMark = { status ->
+                        if (itemState.isExtra && itemState.record != null) {
+                            viewModel.updateExtraAttendance(itemState.record.id, status)
+                        } else if (itemState.slot != null) {
+                            viewModel.markRegularAttendance(itemState.subject.id, itemState.slot.id, status)
                         }
-                    )
-                }
+                    },
+                    onClear = {
+                        if (itemState.isExtra && itemState.record != null) {
+                            viewModel.clearExtraAttendanceById(itemState.record.id)
+                        } else if (itemState.slot != null) {
+                            viewModel.clearRegularAttendance(itemState.subject.id, itemState.slot.id)
+                        }
+                    }
+                )
             }
 
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(28.dp))
             }
         }
     }
 
-    // Add extra class dialog - One-tap subject select without asking for time slot or period
+    // Add Extra Class Dialog
     if (showAddExtraDialog) {
+        val currentExtraSubj = subjectsList.find { it.id == selectedExtraSubjectId } ?: subjectsList.firstOrNull()
+
         AlertDialog(
             onDismissRequest = { showAddExtraDialog = false },
             containerColor = Color(0xFF1E1E1E),
@@ -398,72 +362,144 @@ fun TodayScreen(
                 Text("Add Extra Class", color = Color.White, fontWeight = FontWeight.Bold)
             },
             text = {
-                if (subjectsList.isEmpty()) {
-                    Text("Please add subjects first in the 'Subjects' section before adding extra classes.", color = Color.Gray)
-                } else {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Select course subject to add:",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
                     ) {
-                        Text("Select subject to add an extra class today:", color = Color.LightGray, fontSize = 13.sp)
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 280.dp)
-                        ) {
-                            items(subjectsList, key = { it.id }) { subj ->
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = Color(0xFF262C38),
-                                    border = BorderStroke(1.dp, Color(0xFF384252)),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            viewModel.markExtraAttendance(
-                                                subjectId = subj.id,
-                                                status = "ATTENDED",
-                                                extraPeriodName = "Extra Class",
-                                                extraStartTime = null,
-                                                extraEndTime = null
-                                            )
-                                            showAddExtraDialog = false
-                                            android.widget.Toast.makeText(context, "Added extra class: ${subj.name}", android.widget.Toast.LENGTH_SHORT).show()
+                        items(subjectsList, key = { it.id }) { subj ->
+                            val isSelected = selectedExtraSubjectId == subj.id
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) Color(0xFF374151) else Color(0xFF262C38),
+                                border = BorderStroke(1.dp, if (isSelected) Color(0xFF4F46E5) else Color(0xFF384252)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedExtraSubjectId = subj.id
+                                        if (!subj.isLabIntegrated) {
+                                            selectedExtraClassType = "Lecture"
                                         }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = subj.name,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        if (subj.isLabIntegrated) {
                                             Text(
-                                                text = subj.name,
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp
-                                            )
-                                        }
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFF4F46E5)
-                                        ) {
-                                            Text(
-                                                text = "+ Add",
-                                                color = Color.White,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                text = "Lab Integrated",
+                                                color = Color(0xFFA5B4FC),
+                                                fontSize = 10.sp
                                             )
                                         }
                                     }
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            selectedExtraSubjectId = subj.id
+                                            if (!subj.isLabIntegrated) {
+                                                selectedExtraClassType = "Lecture"
+                                            }
+                                        },
+                                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF4F46E5), unselectedColor = Color.Gray)
+                                    )
                                 }
+                            }
+                        }
+                    }
+
+                    // Component Selection: ONLY shown if selected subject is Lab Integrated!
+                    if (currentExtraSubj?.isLabIntegrated == true) {
+                        Text(
+                            text = "Component for Lab Integrated Paper:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFA5B4FC)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (selectedExtraClassType == "Lecture") Color(0xFF0284C7) else Color(0xFF262C38),
+                                border = BorderStroke(1.dp, if (selectedExtraClassType == "Lecture") Color(0xFF38BDF8) else Color.Gray),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedExtraClassType = "Lecture" }
+                            ) {
+                                Text(
+                                    text = "📖 Lecture",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (selectedExtraClassType == "Lab") Color(0xFF7C3AED) else Color(0xFF262C38),
+                                border = BorderStroke(1.dp, if (selectedExtraClassType == "Lab") Color(0xFFA78BFA) else Color.Gray),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedExtraClassType = "Lab" }
+                            ) {
+                                Text(
+                                    text = "🧪 Lab",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
                             }
                         }
                     }
                 }
             },
-            confirmButton = {},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val subj = currentExtraSubj
+                        if (subj != null) {
+                            val compLabel = if (subj.isLabIntegrated && selectedExtraClassType == "Lab") "Lab Extra Class" else "Extra Class"
+                            viewModel.markExtraAttendance(
+                                subjectId = subj.id,
+                                status = "ATTENDED",
+                                extraPeriodName = compLabel,
+                                extraStartTime = null,
+                                extraEndTime = null
+                            )
+                            showAddExtraDialog = false
+                            android.widget.Toast.makeText(context, "Added $compLabel: ${subj.name}", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
+                ) {
+                    Text("+ Add Extra Class", fontWeight = FontWeight.Bold)
+                }
+            },
             dismissButton = {
                 TextButton(onClick = { showAddExtraDialog = false }) {
                     Text("Cancel", color = Color.Gray)
@@ -472,53 +508,172 @@ fun TodayScreen(
         )
     }
 
-    // Full day leave confirmation dialog
+    // Full day leave confirmation dialog (Restored original options including All Present, Day Off, and Leave)
     if (showLeaveDialog) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
-            containerColor = Color(0xFF1E1E1E),
+            containerColor = Color(0xFF1E222B),
             title = {
-                Text("Full Day Leave", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Full Day Status",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "How would you like to record leave for this day?",
-                        color = Color.LightGray,
+                        text = "Select daily record action for $formattedDate:",
+                        color = Color(0xFFD1D5DB),
                         fontSize = 14.sp
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Button(
-                        onClick = {
-                            viewModel.markFullDayStatus("OFF")
-                            showLeaveDialog = false
-                            android.widget.Toast.makeText(context, "Full day marked as Off / Leave", android.widget.Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
-                        shape = RoundedCornerShape(10.dp)
+
+                    // 1. Mark All Present (Attended)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF14532D),
+                        border = BorderStroke(1.dp, Color(0xFF22C55E)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.markFullDayStatus("ATTENDED")
+                                showLeaveDialog = false
+                                android.widget.Toast.makeText(context, "All classes marked as Present", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                     ) {
-                        Text("Mark as Off / Holiday (Exempt)", fontWeight = FontWeight.Bold, color = Color.White)
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF86EFAC), modifier = Modifier.size(20.dp))
+                            Column {
+                                Text(
+                                    text = "Mark All Present",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFF0FDF4)
+                                )
+                                Text(
+                                    text = "All scheduled periods attended today",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFBBF7D0)
+                                )
+                            }
+                        }
                     }
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.markFullDayStatus("MISSED")
-                            showLeaveDialog = false
-                            android.widget.Toast.makeText(context, "Full day marked as Absent / Missed", android.widget.Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF5350)),
-                        border = BorderStroke(1.dp, Color(0xFFEF5350)),
-                        shape = RoundedCornerShape(10.dp)
+
+                    // 2. Day Off (College Holiday)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF78350F),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.markFullDayStatus("OFF")
+                                showLeaveDialog = false
+                                android.widget.Toast.makeText(context, "Day marked as Off (no % penalty)", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                     ) {
-                        Text("Mark as Missed / Absent", fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.EventBusy, contentDescription = null, tint = Color(0xFFFDE68A), modifier = Modifier.size(20.dp))
+                            Column {
+                                Text(
+                                    text = "Day Off (College / Holiday)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFFFFBEB)
+                                )
+                                Text(
+                                    text = "Excluded from total percentage calculation",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFFDE68A)
+                                )
+                            }
+                        }
+                    }
+
+                    // 3. Personal Leave (Counted as Missed)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF7F1D1D),
+                        border = BorderStroke(1.dp, Color(0xFFEF4444)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.markFullDayStatus("MISSED")
+                                showLeaveDialog = false
+                                android.widget.Toast.makeText(context, "Day marked as Leave (counted as missed)", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.Cancel, contentDescription = null, tint = Color(0xFFFCA5A5), modifier = Modifier.size(20.dp))
+                            Column {
+                                Text(
+                                    text = "Full Day Leave (Missed)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFFEF2F2)
+                                )
+                                Text(
+                                    text = "Counted as bunked/missed lectures",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFFECACA)
+                                )
+                            }
+                        }
+                    }
+
+                    // 4. Reset / Clear
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF1F2937),
+                        border = BorderStroke(1.dp, Color(0xFF4B5563)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.clearFullDayAttendance()
+                                showLeaveDialog = false
+                                android.widget.Toast.makeText(context, "Reset today's records", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(20.dp))
+                            Column {
+                                Text(
+                                    text = "Reset All Records",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Clear status for all periods today",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
                     }
                 }
             },
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showLeaveDialog = false }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text("Close", color = Color.Gray)
                 }
             }
         )
@@ -528,37 +683,35 @@ fun TodayScreen(
 @Composable
 fun TodaySubjectCard(
     itemState: TodaySubjectState,
-    targetPct: Double,
     isToday: Boolean,
+    targetPct: Double,
     onMark: (String) -> Unit,
     onClear: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161A22)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF232936)),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E222B))
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Upper Area: Stats ring and description
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Circular Attendance Ring
+                // Circular Gauge
                 Box(
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier.size(54.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     val progressValue = itemState.stats.percentage / 100.0
-                    val barColor = if (itemState.stats.percentage >= targetPct) Color(0xFF388E3C) else Color(0xFFD32F2F)
-                    
+                    val barColor = if (itemState.stats.percentage >= targetPct) Color(0xFF4CAF50) else Color(0xFFE91E63)
+
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         drawCircle(
-                            color = Color(0xFF1E1E1E),
+                            color = Color(0xFF2C323F),
                             style = Stroke(width = 5.dp.toPx())
                         )
                         drawArc(
@@ -570,7 +723,7 @@ fun TodaySubjectCard(
                         )
                     }
                     Text(
-                        text = "${itemState.stats.percentage.toInt()}%",
+                        text = String.format("%.0f%%", itemState.stats.percentage),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -579,15 +732,39 @@ fun TodaySubjectCard(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Subject Title & Estimate
+                // Subject Title & Component
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = itemState.subject.name,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
+                    val isLabSlot = itemState.slot?.classType?.equals("Lab", ignoreCase = true) == true ||
+                            (itemState.isExtra && itemState.record?.extraPeriodName?.contains("Lab", ignoreCase = true) == true)
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = itemState.subject.name,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        // Pill badge: Lecture or Lab
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (isLabSlot) Color(0xFF7C3AED).copy(alpha = 0.25f) else Color(0xFF0284C7).copy(alpha = 0.25f),
+                            border = BorderStroke(1.dp, if (isLabSlot) Color(0xFF7C3AED) else Color(0xFF0284C7))
+                        ) {
+                            Text(
+                                text = if (isLabSlot) "LAB" else "LECTURE",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isLabSlot) Color(0xFFA78BFA) else Color(0xFF38BDF8),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(4.dp))
+
                     if (itemState.slot != null) {
                         Text(
                             text = "${itemState.slot.periodName} (${itemState.slot.startTime} - ${itemState.slot.endTime})",
@@ -596,47 +773,28 @@ fun TodaySubjectCard(
                         )
                     } else if (itemState.isExtra) {
                         val pName = itemState.record?.extraPeriodName ?: "Extra Class"
-                        val pTimeStr = if (itemState.record?.extraStartTime != null) {
-                            " (${itemState.record.extraStartTime} - ${itemState.record.extraEndTime})"
-                        } else {
-                            ""
-                        }
                         Text(
-                            text = "$pName$pTimeStr",
+                            text = pName,
                             fontSize = 12.sp,
                             color = Color(0xFFBA68C8)
                         )
                     }
-                    Text(
-                        text = itemState.stats.infoText,
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
 
-                    // Countdown Display - ONLY shown for today's schedule!
-                    if (isToday) {
-                        if (itemState.slot != null) {
-                            PeriodCountdownTimer(
-                                startTimeStr = itemState.slot.startTime,
-                                endTimeStr = itemState.slot.endTime
-                            )
-                        } else if (itemState.isExtra && itemState.record != null) {
-                            PeriodCountdownTimer(
-                                startTimeStr = itemState.record.extraStartTime,
-                                endTimeStr = itemState.record.extraEndTime
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Total Subject Attendance: ${String.format("%.1f%%", itemState.stats.percentage)} (${itemState.stats.attendedCount}/${itemState.stats.totCount})",
+                        fontSize = 11.sp,
+                        color = Color.LightGray
+                    )
                 }
             }
 
-            // Uniform Daily status controls
+            // Attendance Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val currentStatus = itemState.record?.status
-                
+
                 ElegantStatusButton(
                     modifier = Modifier.weight(1f),
                     label = "Attended",
@@ -683,86 +841,25 @@ fun ElegantStatusButton(
     selectedBgColor: Color,
     onClick: () -> Unit
 ) {
-        Surface(
+    Surface(
         modifier = modifier
             .height(36.dp)
+            .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() },
-        color = if (isSelected) selectedBgColor else Color(0xFF1E1E1E),
-        shape = RoundedCornerShape(12.dp),
-        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, selectedColor.copy(alpha = 0.5f)) else null
+        color = if (isSelected) selectedBgColor else Color(0xFF262C38),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = if (isSelected) selectedColor else Color(0xFF384252)
+        )
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
                 fontSize = 12.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) selectedColor else Color.Gray
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) Color.White else Color.Gray
             )
         }
-    }
-}
-
-@Composable
-fun PeriodCountdownTimer(startTimeStr: String?, endTimeStr: String?) {
-    if (startTimeStr == null || endTimeStr == null) return
-
-    var remainingText by remember { mutableStateOf("") }
-    var activeStateColor by remember { mutableStateOf(Color.Gray) }
-
-    LaunchedEffect(startTimeStr, endTimeStr) {
-        val parseTime: (String) -> java.time.LocalTime = { timeStr ->
-            val upper = timeStr.uppercase(java.util.Locale.US).trim()
-            var res: java.time.LocalTime? = null
-            val patterns = listOf("hh:mm a", "h:mm a", "HH:mm", "hh:mma", "h:mma")
-            for (p in patterns) {
-                try {
-                    val f = java.time.format.DateTimeFormatter.ofPattern(p, java.util.Locale.US)
-                    res = java.time.LocalTime.parse(upper, f)
-                    break
-                } catch (e: Exception) {}
-            }
-            res ?: throw Exception("Unparseable time: $timeStr")
-        }
-
-        try {
-            val startLocal = parseTime(startTimeStr)
-            val endLocal = parseTime(endTimeStr)
-
-            while (true) {
-                val now = java.time.LocalTime.now()
-                if (now.isBefore(startLocal)) {
-                    val diffSec = java.time.Duration.between(now, startLocal).seconds
-                    val hours = diffSec / 3600
-                    val minutes = (diffSec % 3600) / 60
-                    val seconds = diffSec % 60
-                    remainingText = String.format(java.util.Locale.US, "Starts in: %02d:%02d:%02d", hours, minutes, seconds)
-                    activeStateColor = Color(0xFF4FA6E5)
-                } else if (now.isAfter(endLocal)) {
-                    remainingText = "Ended"
-                    activeStateColor = Color.Gray
-                } else {
-                    val diffSec = java.time.Duration.between(now, endLocal).seconds
-                    val hours = diffSec / 3600
-                    val minutes = (diffSec % 3600) / 60
-                    val seconds = diffSec % 60
-                    remainingText = String.format(java.util.Locale.US, "Ends in: %02d:%02d:%02d (Ongoing)", hours, minutes, seconds)
-                    activeStateColor = Color(0xFF4CAF50)
-                }
-                kotlinx.coroutines.delay(1000L)
-            }
-        } catch (e: Exception) {
-            remainingText = "$startTimeStr - $endTimeStr"
-            activeStateColor = Color.Gray
-        }
-    }
-
-    if (remainingText.isNotEmpty()) {
-        Text(
-            text = remainingText,
-            color = activeStateColor,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 4.dp)
-        )
     }
 }

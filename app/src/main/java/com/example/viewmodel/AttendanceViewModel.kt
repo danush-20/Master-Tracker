@@ -16,7 +16,13 @@ data class SubjectStats(
     val offCount: Int,
     val totCount: Int, // attended + missed
     val percentage: Double,
-    val infoText: String
+    val infoText: String,
+    val lectureAttended: Int = 0,
+    val lectureMissed: Int = 0,
+    val lectureTot: Int = 0,
+    val labAttended: Int = 0,
+    val labMissed: Int = 0,
+    val labTot: Int = 0
 )
 
 data class TodaySubjectState(
@@ -29,7 +35,8 @@ data class TodaySubjectState(
 )
 
 data class SubjectCaMarkItem(
-    val subject: Subject,
+    val subjectName: String,
+    val activeSubject: Subject?,
     val caMark: CaMark?,
     val ca1Marks: Double?,
     val ca1Total: Double?,
@@ -51,6 +58,22 @@ data class CaOverallMetrics(
     val totalSubjects: Int
 )
 
+data class SemesterGpaResult(
+    val semester: Int,
+    val totalCredits: Double,
+    val gpa: Double?,
+    val coursesCount: Int,
+    val gradedCount: Int
+)
+
+data class OverallCgpaResult(
+    val totalCredits: Double,
+    val cgpa: Double?,
+    val selectedSemesters: List<Int>,
+    val totalCoursesCount: Int,
+    val gradedCoursesCount: Int
+)
+
 class AttendanceViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AttendanceDatabase.getDatabase(application)
     private val repository = AttendanceRepository(database.attendanceDao())
@@ -58,7 +81,6 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
     // Date state
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
-
     val selectedDateString: Flow<String> = _selectedDate.map { 
         it.format(DateTimeFormatter.ISO_LOCAL_DATE)
     }
@@ -85,6 +107,14 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
     private val _defaultPeriodDuration = MutableStateFlow(50)
     val defaultPeriodDuration: StateFlow<Int> = _defaultPeriodDuration.asStateFlow()
 
+    // Selected semesters for CGPA calculation (Semesters 1-4 supported, default all selected)
+    private val _selectedSemesters = MutableStateFlow(setOf(1, 2, 3, 4))
+    val selectedSemesters: StateFlow<Set<Int>> = _selectedSemesters.asStateFlow()
+
+    // Active semester tab in Grades screen (1, 2, 3, or 4)
+    private val _activeSemesterTab = MutableStateFlow(1)
+    val activeSemesterTab: StateFlow<Int> = _activeSemesterTab.asStateFlow()
+
     init {
         viewModelScope.launch {
             _targetPercentage.value = repository.getTargetPercentage()
@@ -103,13 +133,15 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
     val timetableSlots = repository.allTimetableSlots.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val attendanceRecords = repository.allAttendanceRecords.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val customPeriods = repository.allCustomPeriods.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val semesterCourses = repository.allSemesterCourses.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // Derived subject stats
+    // Derived subject stats (with Lecture vs Lab breakdown for lab-integrated subjects)
     val subjectStats: StateFlow<List<SubjectStats>> = combine(
         subjects,
+        timetableSlots,
         attendanceRecords,
         _targetPercentage
-    ) { subList, recList, target ->
+    ) { subList, slotList, recList, target ->
         subList.map { subject ->
             val records = recList.filter { it.subjectId == subject.id }
             val attended = subject.baseAttended + records.count { it.status == "ATTENDED" }
@@ -118,6 +150,25 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
             val tot = attended + missed
             val pct = if (tot > 0) (attended.toDouble() / tot) * 100.0 else 100.0
             
+            // Lecture vs Lab breakdown
+            var lecAtt = 0
+            var lecMiss = 0
+            var labAtt = 0
+            var labMiss = 0
+
+            records.forEach { r ->
+                val slot = if (r.slotId != null) slotList.find { it.id == r.slotId } else null
+                val isLab = when {
+                    slot != null -> slot.classType.equals("Lab", ignoreCase = true)
+                    r.extraPeriodName != null -> r.extraPeriodName.contains("Lab", ignoreCase = true)
+                    else -> false
+                }
+                when (r.status) {
+                    "ATTENDED" -> if (isLab) labAtt++ else lecAtt++
+                    "MISSED" -> if (isLab) labMiss++ else lecMiss++
+                }
+            }
+
             val info = if (tot == 0) {
                 "No classes recorded yet"
             } else if (pct >= target) {
@@ -144,7 +195,13 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
                 offCount = off,
                 totCount = tot,
                 percentage = pct,
-                infoText = info
+                infoText = info,
+                lectureAttended = lecAtt,
+                lectureMissed = lecMiss,
+                lectureTot = lecAtt + lecMiss,
+                labAttended = labAtt,
+                labMissed = labMiss,
+                labTot = labAtt + labMiss
             )
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -191,7 +248,7 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    // Bunked counter (e.g., total missed)
+    // Bunked counter
     val totalBunkedCount: StateFlow<Int> = attendanceRecords.map { records ->
         records.count { it.status == "MISSED" }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
@@ -204,18 +261,15 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         attendanceRecords,
         subjectStats
     ) { date, subList, slots, records, statsList ->
-        val dayOfWeek = date.dayOfWeek.value // 1 = Mon, ..., 7 = Sun (we support 6 days)
+        val dayOfWeek = date.dayOfWeek.value // 1 = Mon, ..., 7 = Sun
         val dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
         
-        // Find slots scheduled for this day
         val slotsToday = slots.filter { it.dayOfWeek == dayOfWeek }
         
-        // Match slots with subjects and records
         val scheduledStates = slotsToday.mapNotNull { slot ->
             val subj = subList.find { it.id == slot.subjectId } ?: return@mapNotNull null
             val stats = statsList.find { it.subject.id == subj.id } ?: return@mapNotNull null
             
-            // Fetch regular records for today
             val regularRec = records.find { 
                 it.subjectId == subj.id && it.dateString == dateStr && it.slotId == slot.id && !it.isExtra 
             }
@@ -230,7 +284,6 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
             )
         }
         
-        // Fetch any extra records for today
         val extraStates = records.filter { it.dateString == dateStr && it.isExtra }.mapNotNull { rec ->
             val subj = subList.find { it.id == rec.subjectId } ?: return@mapNotNull null
             val stats = statsList.find { it.subject.id == subj.id } ?: return@mapNotNull null
@@ -301,9 +354,16 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     // Subjects
-    fun addSubject(name: String, baseAttended: Int = 0, baseMissed: Int = 0) {
+    fun addSubject(name: String, baseAttended: Int = 0, baseMissed: Int = 0, isLabIntegrated: Boolean = false) {
         viewModelScope.launch {
-            repository.insertSubject(Subject(name = name, baseAttended = baseAttended, baseMissed = baseMissed))
+            repository.insertSubject(
+                Subject(
+                    name = name,
+                    baseAttended = baseAttended,
+                    baseMissed = baseMissed,
+                    isLabIntegrated = isLabIntegrated
+                )
+            )
         }
     }
 
@@ -339,9 +399,25 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     // Timetable
-    fun addTimetableSlot(dayOfWeek: Int, subjectId: Int, startTime: String, periodName: String, endTime: String = "10:00 AM") {
+    fun addTimetableSlot(
+        dayOfWeek: Int,
+        subjectId: Int,
+        startTime: String,
+        periodName: String,
+        endTime: String = "10:00 AM",
+        classType: String = "Lecture"
+    ) {
         viewModelScope.launch {
-            repository.insertTimetableSlot(dayOfWeek, subjectId, startTime, periodName, endTime)
+            repository.insertTimetableSlot(
+                TimetableSlot(
+                    dayOfWeek = dayOfWeek,
+                    subjectId = subjectId,
+                    startTime = startTime,
+                    periodName = periodName,
+                    endTime = endTime,
+                    classType = classType
+                )
+            )
         }
     }
 
@@ -385,7 +461,13 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun markExtraAttendance(subjectId: Int, status: String, extraPeriodName: String? = null, extraStartTime: String? = null, extraEndTime: String? = null) {
+    fun markExtraAttendance(
+        subjectId: Int,
+        status: String,
+        extraPeriodName: String? = null,
+        extraStartTime: String? = null,
+        extraEndTime: String? = null
+    ) {
         viewModelScope.launch {
             val dateStr = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
             repository.markExtraAttendance(
@@ -402,14 +484,26 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
 
     fun updateExtraAttendance(recordId: Int, status: String) {
         viewModelScope.launch {
-            repository.updateAttendanceStatusById(recordId, status)
+            val rec = repository.getAllAttendanceRecordsList().find { it.id == recordId }
+            if (rec != null) {
+                repository.markAttendance(
+                    dateString = rec.dateString,
+                    subjectId = rec.subjectId,
+                    slotId = rec.slotId,
+                    isExtra = rec.isExtra,
+                    status = status,
+                    extraPeriodName = rec.extraPeriodName,
+                    extraStartTime = rec.extraStartTime,
+                    extraEndTime = rec.extraEndTime
+                )
+            }
             notifyWidgets()
         }
     }
 
     fun clearExtraAttendanceById(recordId: Int) {
         viewModelScope.launch {
-            repository.deleteAttendanceById(recordId)
+            repository.deleteAttendanceRecordById(recordId)
             notifyWidgets()
         }
     }
@@ -435,7 +529,16 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
             }
             val extraRecs = attendanceRecords.value.filter { it.dateString == dateStr && it.isExtra }
             for (rec in extraRecs) {
-                repository.updateAttendanceStatusById(rec.id, status)
+                repository.markAttendance(
+                    dateString = rec.dateString,
+                    subjectId = rec.subjectId,
+                    slotId = rec.slotId,
+                    isExtra = rec.isExtra,
+                    status = status,
+                    extraPeriodName = rec.extraPeriodName,
+                    extraStartTime = rec.extraStartTime,
+                    extraEndTime = rec.extraEndTime
+                )
             }
             notifyWidgets()
         }
@@ -456,7 +559,7 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
             }
             val extraRecs = attendanceRecords.value.filter { it.dateString == dateStr && it.isExtra }
             for (rec in extraRecs) {
-                repository.deleteAttendanceById(rec.id)
+                repository.deleteAttendanceRecordById(rec.id)
             }
             notifyWidgets()
         }
@@ -476,6 +579,7 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
                 context.sendBroadcast(refreshIntent)
                 manager.notifyAppWidgetViewDataChanged(attWidgetIds, com.example.R.id.widget_list_view)
             }
+
             val currCmp = android.content.ComponentName(context, com.example.widget.CurrentClassWidgetProvider::class.java)
             val currWidgetIds = manager.getAppWidgetIds(currCmp)
             if (currWidgetIds.isNotEmpty()) {
@@ -490,6 +594,8 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     // --- CA MARKS STATE & OPERATIONS ---
+    // CA marks are saved by subjectName so deleting subjects from attendance never erases past CA scores!
+    // The subject list is derived dynamically from current course subjects + previously scored subjects
     val caMarks: StateFlow<List<CaMark>> = repository.allCaMarks.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
@@ -500,8 +606,13 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         subjects,
         caMarks
     ) { subList, markList ->
-        subList.map { subj ->
-            val mark = markList.find { it.subjectId == subj.id }
+        // Distinct subject names: active course subjects + any preserved subjects with marks
+        val allNames = (subList.map { it.name } + markList.map { it.subjectName }).distinct().filter { it.isNotBlank() }
+
+        allNames.map { name ->
+            val activeSubj = subList.find { it.name.equals(name, ignoreCase = true) }
+            val mark = markList.find { it.subjectName.equals(name, ignoreCase = true) }
+
             val ca1M = mark?.ca1Marks
             val ca1T = mark?.ca1Total
             val ca1Pct = if (ca1M != null && ca1T != null && ca1T > 0) (ca1M / ca1T) * 100.0 else null
@@ -513,7 +624,6 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
             var obtained = 0.0
             var maxTot = 0.0
             var hasAny = false
-
             if (ca1M != null && ca1T != null && ca1T > 0) {
                 obtained += ca1M
                 maxTot += ca1T
@@ -524,11 +634,11 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
                 maxTot += ca2T
                 hasAny = true
             }
-
             val overall = if (hasAny && maxTot > 0) (obtained / maxTot) * 100.0 else null
 
             SubjectCaMarkItem(
-                subject = subj,
+                subjectName = name,
+                activeSubject = activeSubj,
                 caMark = mark,
                 ca1Marks = ca1M,
                 ca1Total = ca1T,
@@ -548,7 +658,6 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         var totalObt = 0.0
         var totalMax = 0.0
         var count = 0
-
         for (item in items) {
             if (item.hasMarks && item.totalMax > 0) {
                 totalObt += item.totalObtained
@@ -556,9 +665,7 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
                 count++
             }
         }
-
         val overallPct = if (totalMax > 0) (totalObt / totalMax) * 100.0 else null
-
         CaOverallMetrics(
             totalObtained = totalObt,
             totalMax = totalMax,
@@ -568,16 +675,142 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, CaOverallMetrics(0.0, 0.0, null, 0, 0))
 
-    fun saveCaMarks(subjectId: Int, ca1Marks: Double?, ca1Total: Double?, ca2Marks: Double?, ca2Total: Double?) {
+    fun saveCaMarks(subjectName: String, subjectId: Int?, ca1Marks: Double?, ca1Total: Double?, ca2Marks: Double?, ca2Total: Double?) {
         viewModelScope.launch {
-            repository.saveCaMark(subjectId, ca1Marks, ca1Total, ca2Marks, ca2Total)
+            repository.saveCaMark(subjectName.trim(), subjectId, ca1Marks, ca1Total, ca2Marks, ca2Total)
         }
     }
 
-    fun deleteCaMarks(subjectId: Int) {
+    fun deleteCaMarks(subjectName: String) {
         viewModelScope.launch {
-            repository.deleteCaMarkBySubject(subjectId)
+            repository.deleteCaMarkBySubjectName(subjectName.trim())
         }
+    }
+
+    // --- SEMESTER & GPA/CGPA CALCULATIONS (END SEMESTER GRADES) ---
+    fun setActiveSemesterTab(sem: Int) {
+        if (sem in 1..4) {
+            _activeSemesterTab.value = sem
+        }
+    }
+
+    fun toggleSemesterSelection(sem: Int) {
+        val current = _selectedSemesters.value.toMutableSet()
+        if (current.contains(sem)) {
+            if (current.size > 1) { // keep at least 1
+                current.remove(sem)
+            }
+        } else {
+            current.add(sem)
+        }
+        _selectedSemesters.value = current
+    }
+
+    fun addSemesterCourse(
+        semester: Int,
+        name: String,
+        credits: Double,
+        grade: String? = null
+    ) {
+        viewModelScope.launch {
+            repository.insertSemesterCourse(
+                SemesterCourse(
+                    semester = semester,
+                    name = name.trim(),
+                    credits = credits,
+                    grade = grade
+                )
+            )
+        }
+    }
+
+    fun updateSemesterCourse(course: SemesterCourse) {
+        viewModelScope.launch {
+            repository.updateSemesterCourse(course)
+        }
+    }
+
+    fun deleteSemesterCourse(course: SemesterCourse) {
+        viewModelScope.launch {
+            repository.deleteSemesterCourse(course)
+        }
+    }
+
+    // Semester GPA per semester (1..4)
+    fun getSemesterGpa(semester: Int, courses: List<SemesterCourse>): SemesterGpaResult {
+        val semCourses = courses.filter { it.semester == semester }
+        var sumCreditPoints = 0.0
+        var sumCredits = 0.0
+        var graded = 0
+        var totalCreds = 0.0
+
+        for (c in semCourses) {
+            totalCreds += c.credits
+            val gp = gradeToPoints(c.grade)
+            if (gp != null) {
+                sumCreditPoints += (c.credits * gp)
+                sumCredits += c.credits
+                graded++
+            }
+        }
+
+        val gpa = if (sumCredits > 0.0) sumCreditPoints / sumCredits else null
+        return SemesterGpaResult(
+            semester = semester,
+            totalCredits = totalCreds,
+            gpa = gpa,
+            coursesCount = semCourses.size,
+            gradedCount = graded
+        )
+    }
+
+    // Credit-weighted CGPA across selected semesters: sum(credits * gradePoints) / sum(credits)
+    val overallCgpaResult: StateFlow<OverallCgpaResult> = combine(
+        semesterCourses,
+        _selectedSemesters
+    ) { courses, selectedSems ->
+        val filtered = courses.filter { selectedSems.contains(it.semester) }
+        var sumCreditPoints = 0.0
+        var sumCredits = 0.0
+        var gradedCount = 0
+        var totalCreds = 0.0
+
+        for (c in filtered) {
+            totalCreds += c.credits
+            val gp = gradeToPoints(c.grade)
+            if (gp != null) {
+                sumCreditPoints += (c.credits * gp)
+                sumCredits += c.credits
+                gradedCount++
+            }
+        }
+
+        val cgpa = if (sumCredits > 0.0) sumCreditPoints / sumCredits else null
+        OverallCgpaResult(
+            totalCredits = totalCreds,
+            cgpa = cgpa,
+            selectedSemesters = selectedSems.sorted(),
+            totalCoursesCount = filtered.size,
+            gradedCoursesCount = gradedCount
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, OverallCgpaResult(0.0, null, listOf(1, 2, 3, 4), 0, 0))
+
+    companion object {
+        fun gradeToPoints(grade: String?): Double? {
+            return when (grade?.trim()?.uppercase()) {
+                "O" -> 10.0
+                "A+" -> 9.0
+                "A" -> 8.0
+                "B+" -> 7.0
+                "B" -> 6.0
+                "C" -> 5.0
+                "U" -> 0.0
+                else -> null
+            }
+        }
+
+        val GRADE_OPTIONS = listOf("O", "A+", "A", "B+", "B", "C", "U")
+        val CREDIT_OPTIONS = listOf(1.5, 3.0, 4.0, 4.5)
     }
 
     // Retained for database compatibility if needed
@@ -586,31 +819,6 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         started = SharingStarted.Eagerly,
         initialValue = emptyList()
     )
-
-
-    // Populate standard sample entries for fresh visual appeal
-    fun populateDemoData() {
-        viewModelScope.launch {
-            // Task Samples
-            repository.insertTask(Task(title = "Revise Physics Lecture notes", subjectId = null, priority = "HIGH", fuzzyPeriod = "Today Night", note = "Read chapters 3 to 5", isCompleted = false))
-            repository.insertTask(Task(title = "Submit Calculus Assignment", subjectId = null, priority = "MEDIUM", fuzzyPeriod = "Tomorrow Morning", note = "Problems 1-10", isCompleted = true))
-            repository.insertTask(Task(title = "Pay Semester Club Fee", subjectId = null, priority = "LOW", fuzzyPeriod = "Tomorrow Evening", note = "", isCompleted = false))
-            
-            // Add live class tracker demo for current time
-            val subjId = repository.insertSubject(Subject(name = "Computer Networks")).toInt()
-            
-            val now = java.time.LocalTime.now()
-            val startLocal = now.minusMinutes(10)
-            val endLocal = now.plusMinutes(50)
-            
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("hh:mm a", java.util.Locale.US)
-            val startStr = startLocal.format(formatter)
-            val endStr = endLocal.format(formatter)
-            
-            val dayOfWeek = java.time.LocalDate.now().dayOfWeek.value
-            repository.insertTimetableSlot(dayOfWeek, subjId, startStr, "Live Lecture", endStr)
-        }
-    }
 
     suspend fun getExportDataJson(): String {
         val exportData = repository.getExportData()

@@ -12,11 +12,13 @@ data class Subject(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
     val baseAttended: Int = 0,
-    val baseMissed: Int = 0
+    val baseMissed: Int = 0,
+    val isLabIntegrated: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)
-@Entity(tableName = "timetable_slots",
+@Entity(
+    tableName = "timetable_slots",
     foreignKeys = [
         ForeignKey(
             entity = Subject::class,
@@ -33,7 +35,8 @@ data class TimetableSlot(
     val subjectId: Int,
     val startTime: String = "09:00 AM", // "hh:mm a"
     val periodName: String = "Period", // e.g. "Period 1"
-    val endTime: String = "10:00 AM"     // "hh:mm a"
+    val endTime: String = "10:00 AM",   // "hh:mm a"
+    val classType: String = "Lecture"   // "Lecture" or "Lab"
 )
 
 @JsonClass(generateAdapter = true)
@@ -103,37 +106,47 @@ data class Task(
     val isCompleted: Boolean = false
 )
 
+// CA Marks for current semester's subjects
 @JsonClass(generateAdapter = true)
 @Entity(
     tableName = "ca_marks",
-    foreignKeys = [
-        ForeignKey(
-            entity = Subject::class,
-            parentColumns = ["id"],
-            childColumns = ["subjectId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index("subjectId", unique = true)]
+    indices = [Index("subjectName", unique = true)]
 )
 data class CaMark(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val subjectId: Int,
+    val subjectId: Int? = null,
+    val subjectName: String = "",
     val ca1Marks: Double? = null,
     val ca1Total: Double? = null,
     val ca2Marks: Double? = null,
     val ca2Total: Double? = null
 )
 
+// End Semester Grades and course credits for Semesters 1 to 4
 @JsonClass(generateAdapter = true)
-data class ExportData(
-    val subjects: List<Subject>,
-    val timetableSlots: List<TimetableSlot>,
-    val attendanceRecords: List<AttendanceRecord>,
-    val settings: List<AppSetting>,
-    val tasks: List<Task> = emptyList(),
-    val customPeriods: List<CustomPeriod> = emptyList(),
-    val caMarks: List<CaMark> = emptyList()
+@Entity(tableName = "semester_courses")
+data class SemesterCourse(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val semester: Int, // 1, 2, 3, or 4
+    val name: String,
+    val credits: Double = 3.0, // 1.5, 3.0, 4.0, 4.5
+    val grade: String? = null, // "O", "A+", "A", "B+", "B", "C", "U", or null if result pending
+    val ca1Marks: Double? = null,
+    val ca1Total: Double? = null,
+    val ca2Marks: Double? = null,
+    val ca2Total: Double? = null,
+    val endSemMarks: Double? = null,
+    val endSemTotal: Double? = null
 )
 
-
+@JsonClass(generateAdapter = true)
+data class ExportData(
+    val subjects: List<Subject> = emptyList(),
+    val timetableSlots: List<TimetableSlot> = emptyList(),
+    val attendanceRecords: List<AttendanceRecord> = emptyList(),
+    val settings: List<AppSetting> = emptyList(),
+    val tasks: List<Task> = emptyList(),
+    val customPeriods: List<CustomPeriod> = emptyList(),
+    val caMarks: List<CaMark> = emptyList(),
+    val semesterCourses: List<SemesterCourse> = emptyList()
+)

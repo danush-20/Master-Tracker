@@ -4,13 +4,21 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Subject::class, TimetableSlot::class, AttendanceRecord::class, AppSetting::class, Task::class, CustomPeriod::class, CaMark::class],
-    version = 6,
+    entities = [
+        Subject::class,
+        TimetableSlot::class,
+        AttendanceRecord::class,
+        AppSetting::class,
+        Task::class,
+        CustomPeriod::class,
+        CaMark::class,
+        SemesterCourse::class
+    ],
+    version = 9,
     exportSchema = false
 )
 abstract class AttendanceDatabase : RoomDatabase() {
@@ -20,27 +28,21 @@ abstract class AttendanceDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AttendanceDatabase? = null
 
-        val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE subjects ADD COLUMN baseAttended INTEGER NOT NULL DEFAULT 0")
-                database.execSQL("ALTER TABLE subjects ADD COLUMN baseMissed INTEGER NOT NULL DEFAULT 0")
-            }
-        }
-
-        val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("""
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS ca_marks")
+                db.execSQL("""
                     CREATE TABLE IF NOT EXISTS ca_marks (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        subjectId INTEGER NOT NULL,
+                        subjectId INTEGER,
+                        subjectName TEXT NOT NULL DEFAULT '',
                         ca1Marks REAL,
                         ca1Total REAL,
                         ca2Marks REAL,
-                        ca2Total REAL,
-                        FOREIGN KEY(subjectId) REFERENCES subjects(id) ON DELETE CASCADE
+                        ca2Total REAL
                     )
                 """.trimIndent())
-                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_ca_marks_subjectId ON ca_marks(subjectId)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_ca_marks_subjectName ON ca_marks(subjectName)")
             }
         }
 
@@ -51,7 +53,7 @@ abstract class AttendanceDatabase : RoomDatabase() {
                     AttendanceDatabase::class.java,
                     "attendance_database"
                 )
-                .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_8_9)
                 .fallbackToDestructiveMigration(true)
                 .build()
                 INSTANCE = instance
@@ -60,4 +62,3 @@ abstract class AttendanceDatabase : RoomDatabase() {
         }
     }
 }
-

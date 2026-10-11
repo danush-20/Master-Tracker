@@ -12,7 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EditCalendar
@@ -75,7 +75,6 @@ fun CalendarScreen(
 
         val tot = attendedCount + missedCount
         val pct = if (tot > 0) (attendedCount.toDouble() / tot) * 100.0 else 0.0
-
         object {
             val off = offCount
             val missed = missedCount
@@ -88,7 +87,6 @@ fun CalendarScreen(
     // Days in current selected month
     val daysInMonth = currentYearMonth.lengthOfMonth()
     val firstOfMonth = currentYearMonth.atDay(1)
-    // Offset for Monday-start (Mon=1 -> 0, Sun=7 -> 6)
     val startDayOffset = firstOfMonth.dayOfWeek.value - 1
 
     Scaffold(
@@ -101,32 +99,22 @@ fun CalendarScreen(
                             Icons.Default.CalendarMonth,
                             contentDescription = null,
                             tint = Color(0xFFBA68C8),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Attendance History", fontWeight = FontWeight.Bold)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF121212)),
-                actions = {
-                    // Quick target percentage badge
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF1E1E1E),
-                        modifier = Modifier.padding(end = 12.dp)
-                    ) {
                         Text(
-                            text = "Target: ${targetPct.toInt()}%",
-                            color = Color.LightGray,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            text = "Attendance History",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF161A22)
+                )
             )
         },
-        containerColor = Color(0xFF121212)
+        containerColor = Color(0xFF0F1216)
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -135,169 +123,176 @@ fun CalendarScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Month Switcher Header
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            // Month navigation card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF161A22)),
-                    border = BorderStroke(1.dp, Color(0xFF232936)),
-                    shape = RoundedCornerShape(16.dp)
+                    border = BorderStroke(1.dp, Color(0xFF282F3B))
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { currentYearMonth = currentYearMonth.minusMonths(1) }) {
-                            Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Prev Month", tint = Color.LightGray)
-                        }
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { currentYearMonth = currentYearMonth.minusMonths(1) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ArrowBackIosNew,
+                                    contentDescription = "Previous Month",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = currentYearMonth.format(monthFormatter),
-                                fontSize = 17.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
-                            if (currentYearMonth != YearMonth.now()) {
-                                Text(
-                                    text = "Current Month",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFFBA68C8),
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .clickable {
-                                            currentYearMonth = YearMonth.now()
-                                            focusedDate = LocalDate.now()
-                                        }
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+
+                            IconButton(
+                                onClick = { currentYearMonth = currentYearMonth.plusMonths(1) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                    contentDescription = "Next Month",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
 
-                        IconButton(onClick = { currentYearMonth = currentYearMonth.plusMonths(1) }) {
-                            Icon(Icons.Default.ArrowForwardIos, contentDescription = "Next Month", tint = Color.LightGray)
-                        }
-                    }
-                }
-            }
+                        Spacer(modifier = Modifier.height(8.dp))
 
-            // Monthly Summary Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161A22)),
-                    border = BorderStroke(1.dp, Color(0xFF232936)),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "MONTH AT A GLANCE",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Gray,
-                            letterSpacing = 0.5.sp,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
+                        // Monthly Summary Pill Bar
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF1E2430), RoundedCornerShape(12.dp))
+                                .padding(vertical = 10.dp, horizontal = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            StatMiniColumn(title = "Off", count = monthStats.off.toString(), dotColor = Color(0xFFFBC02D))
-                            StatMiniColumn(title = "Missed", count = monthStats.missed.toString(), dotColor = Color(0xFFE91E63))
-                            StatMiniColumn(title = "Attended", count = monthStats.attended.toString(), dotColor = Color(0xFF4CAF50))
-                            StatMiniColumn(title = "Total", count = monthStats.total.toString())
-                            StatMiniColumn(
-                                title = "Rate",
-                                count = String.format(Locale.US, "%.1f%%", monthStats.percent),
-                                highlightColor = if (monthStats.percent >= targetPct) Color(0xFF4CAF50) else Color(0xFFE91E63)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Calendar Grid Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161A22)),
-                    border = BorderStroke(1.dp, Color(0xFF232936)),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Weekday Names
-                        val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            weekDays.forEach { dayName ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = dayName,
-                                    modifier = Modifier.weight(1f),
-                                    textAlign = TextAlign.Center,
+                                    text = "${monthStats.attended}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF4CAF50)
+                                )
+                                Text("Attended", fontSize = 10.sp, color = Color.Gray)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "${monthStats.missed}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFE91E63)
+                                )
+                                Text("Missed", fontSize = 10.sp, color = Color.Gray)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "${monthStats.off}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFFBC02D)
+                                )
+                                Text("Off/Leave", fontSize = 10.sp, color = Color.Gray)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                val isSafe = monthStats.percent >= targetPct
+                                Text(
+                                    text = String.format(Locale.US, "%.1f%%", monthStats.percent),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSafe) Color(0xFF4CAF50) else Color(0xFFE91E63)
+                                )
+                                Text("Monthly %", fontSize = 10.sp, color = Color.Gray)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Day of week header row (Mon - Sun)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            val dayNames = listOf("M", "T", "W", "T", "F", "S", "S")
+                            dayNames.forEach { day ->
+                                Text(
+                                    text = day,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (dayName == "Sun") Color(0xFFEF5350) else Color(0xFF90A4AE)
+                                    color = Color.Gray,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
 
-                        Divider(color = Color(0xFF232936), thickness = 0.8.dp, modifier = Modifier.padding(vertical = 4.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = Color(0xFF232936), thickness = 0.8.dp)
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        // Grid Weeks
+                        // Calendar Grid Weeks
                         val totalCells = startDayOffset + daysInMonth
                         val numRows = (totalCells + 6) / 7
 
-                        for (row in 0 until numRows) {
+                        for (r in 0 until numRows) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                for (col in 0 until 7) {
-                                    val cellIndex = row * 7 + col
+                                for (c in 0 until 7) {
+                                    val cellIndex = r * 7 + c
                                     val dayNum = cellIndex - startDayOffset + 1
 
                                     if (dayNum in 1..daysInMonth) {
-                                        val cellDate = currentYearMonth.atDay(dayNum)
-                                        val isSelected = cellDate == focusedDate
-                                        val isToday = cellDate == LocalDate.now()
+                                        val thisDate = currentYearMonth.atDay(dayNum)
+                                        val isSelected = thisDate == focusedDate
+                                        val isToday = thisDate == LocalDate.now()
+                                        val dateStr = thisDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
 
-                                        // Attendance records for this specific day
-                                        val cellDateStr = cellDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                                        val recordsOnCell = allRecords.filter { it.dateString == cellDateStr }
-                                        val slotsOnDay = timetableSlots.filter { it.dayOfWeek == cellDate.dayOfWeek.value }
-
-                                        val attendedCount = recordsOnCell.count { it.status == "ATTENDED" }
-                                        val missedCount = recordsOnCell.count { it.status == "MISSED" }
-                                        val offCount = recordsOnCell.count { it.status == "OFF" }
+                                        val dayRecords = allRecords.filter { it.dateString == dateStr }
+                                        val hasAttended = dayRecords.any { it.status == "ATTENDED" }
+                                        val hasMissed = dayRecords.any { it.status == "MISSED" }
+                                        val hasOff = dayRecords.any { it.status == "OFF" }
 
                                         Box(
                                             modifier = Modifier
                                                 .weight(1f)
-                                                .height(48.dp)
+                                                .aspectRatio(1f)
                                                 .padding(2.dp)
-                                                .clip(RoundedCornerShape(10.dp))
-                                                .then(
-                                                    if (isSelected) {
-                                                        Modifier.background(Color(0xFF4F46E5))
-                                                    } else if (isToday) {
-                                                        Modifier
-                                                            .background(Color(0xFF1E222B))
-                                                            .border(1.dp, Color(0xFFBA68C8), RoundedCornerShape(10.dp))
-                                                    } else {
-                                                        Modifier.background(Color.Transparent)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(
+                                                    when {
+                                                        isSelected -> Color(0xFF4F46E5)
+                                                        isToday -> Color(0xFF262C38)
+                                                        else -> Color.Transparent
                                                     }
                                                 )
+                                                .border(
+                                                    width = if (isToday && !isSelected) 1.dp else 0.dp,
+                                                    color = if (isToday && !isSelected) Color(0xFFBA68C8) else Color.Transparent,
+                                                    shape = RoundedCornerShape(8.dp)
+                                                )
                                                 .clickable {
-                                                    focusedDate = cellDate
+                                                    focusedDate = thisDate
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -306,65 +301,53 @@ fun CalendarScreen(
                                                 verticalArrangement = Arrangement.Center
                                             ) {
                                                 Text(
-                                                    text = dayNum.toString(),
-                                                    fontSize = 13.sp,
-                                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
+                                                    text = "$dayNum",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                                                     color = when {
                                                         isSelected -> Color.White
                                                         isToday -> Color(0xFFBA68C8)
-                                                        col == 6 -> Color(0xFFE57373)
                                                         else -> Color.White
                                                     }
                                                 )
 
-                                                Spacer(modifier = Modifier.height(2.dp))
-
-                                                // Attendance status dot indicator
-                                                if (recordsOnCell.isNotEmpty()) {
+                                                if (dayRecords.isNotEmpty()) {
                                                     Row(
-                                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                                        verticalAlignment = Alignment.CenterVertically
+                                                        horizontalArrangement = Arrangement.Center,
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        modifier = Modifier.padding(top = 2.dp)
                                                     ) {
-                                                        if (attendedCount > 0) {
+                                                        if (hasAttended) {
                                                             Box(
                                                                 modifier = Modifier
                                                                     .size(4.dp)
                                                                     .clip(CircleShape)
-                                                                    .background(if (isSelected) Color.White else Color(0xFF4CAF50))
+                                                                    .background(Color(0xFF4CAF50))
                                                             )
+                                                            Spacer(modifier = Modifier.width(2.dp))
                                                         }
-                                                        if (missedCount > 0) {
+                                                        if (hasMissed) {
                                                             Box(
                                                                 modifier = Modifier
                                                                     .size(4.dp)
                                                                     .clip(CircleShape)
-                                                                    .background(if (isSelected) Color.Yellow else Color(0xFFE91E63))
+                                                                    .background(Color(0xFFE91E63))
                                                             )
+                                                            Spacer(modifier = Modifier.width(2.dp))
                                                         }
-                                                        if (offCount > 0 && attendedCount == 0 && missedCount == 0) {
+                                                        if (hasOff) {
                                                             Box(
                                                                 modifier = Modifier
                                                                     .size(4.dp)
                                                                     .clip(CircleShape)
-                                                                    .background(if (isSelected) Color.White else Color(0xFFFBC02D))
+                                                                    .background(Color(0xFFFBC02D))
                                                             )
                                                         }
                                                     }
-                                                } else if (slotsOnDay.isNotEmpty() && cellDate.isBefore(LocalDate.now())) {
-                                                    // Scheduled classes were missed/unrecorded in past
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(3.dp)
-                                                            .clip(CircleShape)
-                                                            .background(Color.Gray.copy(alpha = 0.5f))
-                                                    )
-                                                } else {
-                                                    Spacer(modifier = Modifier.height(4.dp))
                                                 }
                                             }
                                         }
                                     } else {
-                                        // Empty space for offset
                                         Spacer(modifier = Modifier.weight(1f))
                                     }
                                 }
@@ -374,7 +357,7 @@ fun CalendarScreen(
                 }
             }
 
-            // Clicked Day Detail Section
+            // Focused Date Detail Card
             item {
                 val focusedDateStr = focusedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
                 val dayOfWeek = focusedDate.dayOfWeek.value
@@ -384,22 +367,17 @@ fun CalendarScreen(
                 val dayAttended = recordsForDay.count { it.status == "ATTENDED" }
                 val dayMissed = recordsForDay.count { it.status == "MISSED" }
                 val dayOff = recordsForDay.count { it.status == "OFF" }
-                val dayTotal = dayAttended + dayMissed
-                val dayPct = if (dayTotal > 0) (dayAttended.toDouble() / dayTotal) * 100.0 else 0.0
 
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("day_detail_card"),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF161A22)),
-                    border = BorderStroke(1.dp, Color(0xFF232936)),
-                    shape = RoundedCornerShape(20.dp)
+                    border = BorderStroke(1.dp, Color(0xFF282F3B))
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Date Heading & Summary
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -407,26 +385,27 @@ fun CalendarScreen(
                         ) {
                             Column {
                                 Text(
+                                    text = "DAY DETAILS",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFBA68C8),
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
                                     text = focusedDate.format(dayDetailFormatter),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
-                                Text(
-                                    text = if (focusedDate == LocalDate.now()) "Today" else if (focusedDate.isBefore(LocalDate.now())) "Past Record" else "Upcoming",
-                                    fontSize = 11.sp,
-                                    color = if (focusedDate == LocalDate.now()) Color(0xFFBA68C8) else Color.Gray,
-                                    fontWeight = FontWeight.Medium
-                                )
                             }
 
-                            if (dayTotal > 0) {
+                            if (focusedDate == LocalDate.now()) {
                                 Surface(
-                                    color = if (dayPct >= targetPct) Color(0xFF1B5E20) else Color(0xFFB71C1C),
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFF4F46E5)
                                 ) {
                                     Text(
-                                        text = String.format(Locale.US, "%.0f%%", dayPct),
+                                        text = "Today",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -446,9 +425,9 @@ fun CalendarScreen(
                             DayStatusPill(label = "Off", count = dayOff, color = Color(0xFFFBC02D), modifier = Modifier.weight(1f))
                         }
 
-                        Divider(color = Color(0xFF232936), thickness = 0.8.dp)
+                        HorizontalDivider(color = Color(0xFF232936), thickness = 0.8.dp)
 
-                        // Classes / Periods list on this day
+                        // Classes / Periods list on this day (Showing Lecture vs Lab separately)
                         if (slotsForDay.isEmpty() && recordsForDay.isEmpty()) {
                             Text(
                                 text = "No timetable slots or classes scheduled for this day.",
@@ -473,9 +452,11 @@ fun CalendarScreen(
                                 slotsForDay.forEach { slot ->
                                     val subj = subjectsList.find { it.id == slot.subjectId }
                                     val rec = recordsForDay.find { it.slotId == slot.id && !it.isExtra }
+                                    val isLab = slot.classType.equals("Lab", ignoreCase = true)
+                                    val componentTag = if (isLab) " [Lab]" else " [Lecture]"
 
                                     DayPeriodRow(
-                                        subjectName = subj?.name ?: "Unknown Subject",
+                                        subjectName = "${subj?.name ?: "Unknown Subject"}$componentTag",
                                         periodInfo = "${slot.periodName} (${slot.startTime} - ${slot.endTime})",
                                         status = rec?.status,
                                         onClick = {
@@ -504,7 +485,7 @@ fun CalendarScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // REDIRECT BUTTON TO SCHEDULE VIEW - Modern Elevated Style
+                        // Redirect Button to Schedule View
                         Button(
                             onClick = { onNavigateToScheduleDate(focusedDate) },
                             modifier = Modifier
@@ -533,7 +514,7 @@ fun CalendarScreen(
                             )
                         }
 
-                        // Quick action buttons with high-contrast, modern M3 UI
+                        // Quick action buttons
                         if (slotsForDay.isNotEmpty() || recordsForDay.isNotEmpty()) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -548,57 +529,29 @@ fun CalendarScreen(
                                         .weight(1f)
                                         .height(42.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF2E7D32),
-                                        contentColor = Color.White
+                                        containerColor = Color(0xFF1B5E20),
+                                        contentColor = Color(0xFF81C784)
                                     ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Full Attended",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1
-                                    )
+                                    Text("Mark All Present", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
 
                                 Button(
                                     onClick = {
                                         viewModel.markFullDayStatusForDate(focusedDate, "OFF")
-                                        Toast.makeText(context, "Marked full day as Leave / Off", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Marked full day as Off", Toast.LENGTH_SHORT).show()
                                     },
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(42.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFE65100),
-                                        contentColor = Color.White
+                                        containerColor = Color(0xFF78350F),
+                                        contentColor = Color(0xFFFDE68A)
                                     ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Icon(
-                                        Icons.Default.EventBusy,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Full Leave",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1
-                                    )
+                                    Text("Mark Full Day Off", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -609,41 +562,6 @@ fun CalendarScreen(
             item {
                 Spacer(modifier = Modifier.height(28.dp))
             }
-        }
-    }
-}
-
-@Composable
-fun DayStatusPill(
-    label: String,
-    count: Int,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        color = Color(0xFF1E222B),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(color)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "$count $label",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White
-            )
         }
     }
 }
@@ -660,21 +578,19 @@ fun DayPeriodRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .clickable { onClick() },
-        color = Color(0xFF1E222B),
-        border = BorderStroke(1.dp, Color(0xFF282F3B))
+        color = Color(0xFF1E2430),
+        border = BorderStroke(1.dp, Color(0xFF263044))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = subjectName,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
@@ -684,103 +600,64 @@ fun DayPeriodRow(
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            val statusColor = when (status) {
+                "ATTENDED" -> Color(0xFF4CAF50)
+                "MISSED" -> Color(0xFFE91E63)
+                "OFF" -> Color(0xFFFBC02D)
+                else -> Color.Gray
+            }
+            val statusLabel = when (status) {
+                "ATTENDED" -> "Attended"
+                "MISSED" -> "Missed"
+                "OFF" -> "Off"
+                else -> "Not Marked"
+            }
 
-            // Status tag
-            when (status) {
-                "ATTENDED" -> {
-                    Surface(
-                        color = Color(0xFF1B5E20),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "✓ Attended",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF81C784),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                "MISSED" -> {
-                    Surface(
-                        color = Color(0xFFB71C1C),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "✕ Missed",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFEF9A9A),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                "OFF" -> {
-                    Surface(
-                        color = Color(0xFFF57F17),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "– Off",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                else -> {
-                    Surface(
-                        color = Color(0xFF2C323F),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "Not Marked",
-                            fontSize = 11.sp,
-                            color = Color.Gray,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = statusColor.copy(alpha = 0.2f),
+                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.6f))
+            ) {
+                Text(
+                    text = statusLabel,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-fun StatMiniColumn(
-    title: String,
-    count: String,
-    dotColor: Color? = null,
-    highlightColor: Color? = null
+fun DayStatusPill(
+    label: String,
+    count: Int,
+    color: Color,
+    modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = Color(0xFF1E2430),
+        border = BorderStroke(1.dp, Color(0xFF263044))
     ) {
-        Text(
-            text = count,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            color = highlightColor ?: Color.White
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (dotColor != null) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(dotColor)
-                )
-            }
             Text(
-                text = title,
-                fontSize = 11.sp,
-                color = Color.Gray
+                text = "$count",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black,
+                color = color
+            )
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.Medium
             )
         }
     }

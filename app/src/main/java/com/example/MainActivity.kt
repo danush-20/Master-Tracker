@@ -89,7 +89,7 @@ fun MainScreen() {
                     selected = currentTab == MainTab.CA_MARKS,
                     onClick = { currentTab = MainTab.CA_MARKS },
                     icon = { Icon(Icons.Default.Assessment, contentDescription = "CA Marks") },
-                    label = { Text("CA Marks", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Grades", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
                         selectedTextColor = Color.White,

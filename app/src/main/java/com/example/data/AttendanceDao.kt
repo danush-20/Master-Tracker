@@ -146,14 +146,14 @@ interface AttendanceDao {
     suspend fun getAllTasksList(): List<Task>
 
     // CA Marks queries
-    @Query("SELECT * FROM ca_marks")
+    @Query("SELECT * FROM ca_marks ORDER BY id ASC")
     fun getAllCaMarks(): Flow<List<CaMark>>
 
     @Query("SELECT * FROM ca_marks")
     suspend fun getAllCaMarksList(): List<CaMark>
 
-    @Query("SELECT * FROM ca_marks WHERE subjectId = :subjectId LIMIT 1")
-    suspend fun getCaMarkForSubject(subjectId: Int): CaMark?
+    @Query("SELECT * FROM ca_marks WHERE subjectName = :name LIMIT 1")
+    suspend fun getCaMarkBySubjectName(name: String): CaMark?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateCaMark(caMark: CaMark): Long
@@ -161,13 +161,43 @@ interface AttendanceDao {
     @Query("DELETE FROM ca_marks WHERE id = :id")
     suspend fun deleteCaMarkById(id: Int)
 
-    @Query("DELETE FROM ca_marks WHERE subjectId = :subjectId")
-    suspend fun deleteCaMarkBySubjectId(subjectId: Int)
+    @Query("DELETE FROM ca_marks WHERE subjectName = :name")
+    suspend fun deleteCaMarkBySubjectName(name: String)
 
     @Query("DELETE FROM ca_marks")
     suspend fun clearCaMarks()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCaMarks(marks: List<CaMark>)
-}
 
+    // Semester Courses queries (Semesters 1-4)
+    @Query("SELECT * FROM semester_courses ORDER BY semester ASC, id ASC")
+    fun getAllSemesterCourses(): Flow<List<SemesterCourse>>
+
+    @Query("SELECT * FROM semester_courses WHERE semester = :semester ORDER BY id ASC")
+    fun getSemesterCourses(semester: Int): Flow<List<SemesterCourse>>
+
+    @Query("SELECT * FROM semester_courses")
+    suspend fun getAllSemesterCoursesList(): List<SemesterCourse>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSemesterCourse(course: SemesterCourse): Long
+
+    @Update
+    suspend fun updateSemesterCourse(course: SemesterCourse)
+
+    @Delete
+    suspend fun deleteSemesterCourse(course: SemesterCourse)
+
+    @Query("DELETE FROM semester_courses WHERE id = :id")
+    suspend fun deleteSemesterCourseById(id: Int)
+
+    @Query("DELETE FROM semester_courses WHERE semester = :semester")
+    suspend fun deleteSemesterCoursesBySemester(semester: Int)
+
+    @Query("DELETE FROM semester_courses")
+    suspend fun clearSemesterCourses()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSemesterCourses(courses: List<SemesterCourse>)
+}
